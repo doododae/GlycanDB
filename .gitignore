@@ -2,3 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+db/hs_pnp_10_14mer.tsv
+dependencies/smoother_1.3.tar.gz
+rsconnect/.DS_Store
+rsconnect/shinyapps.io/.DS_Store
+rsconnect/shinyapps.io/glycantherapeutics/GlycanDB.dcf
