@@ -278,7 +278,7 @@ server <- function(input, output, session) {
         paste0("merge_result_", Sys.Date(), ".csv")
       },
       content = function(fname) {
-        outp_db <- getDetails(quan_search())
+        outp_db <- quanSummary(quan_search())
         write.table(outp_db, fname, sep=",", row.names=FALSE)
       },
       contentType = 'text/csv'

@@ -157,7 +157,7 @@ hepQuan <- function(scan, iso, ppm, data, minscan, start, end, dp_lwr, dp_upr) {
         mz = round(mean(mz), 4),
         mono_mw = round(mean(mono_mw), 4),
         abundance = sum(abundance),
-        time = mean(time),
+        time = median(time),
         gaussian = max(gaussian),
         scan_count=sum(scan_count),
         scan_range=sum(scan_range)

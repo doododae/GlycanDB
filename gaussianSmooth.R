@@ -1,4 +1,4 @@
-gaussianSmooth <- function(x, window, sd = window / 4) {
+gaussianSmooth <- function(x, window = 11, sd = window / 4) {
   # window should be odd
   half <- floor(window / 2)
   kernel <- dnorm(-half:half, mean = 0, sd = sd)
