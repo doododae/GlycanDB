@@ -157,36 +157,7 @@ ui <- dashboardPage(
 
 # Define server logic here
 server <- function(input, output, session) {
-    #hs_10_14 = 'input$db/hs_pnp_10_14mer_library.tsv'
-    
-    
-    #input$db <- read.table(file = db_location, sep = '\t', header = TRUE)
 
-    #outp_db <- input$db
-    
-    #initial qualitative table render - i might be able to put it elsewhere?
-    #output$db_table <- renderReactable({ 
-      #reactable(outp_db, 
-        # ALL COLUMNS (name, HexA, HexN, Ac, S, formula, neutral_mass, floating_Na, floating_NH3)
-      #  columns = list(
-      #    DP = colDef(show = F),
-      #    formula = colDef(show = F),
-      #    floating_Na = colDef(show = F),
-      #    floating_NH3 = colDef(show = F)
-      #  ),
-      #  defaultColDef = colDef(show = T), 
-      #  details = colDef(
-      #    name = "More",
-      #    details = JS("function(rowInfo) {
-      #     return `Details for row: ${rowInfo.index}` +
-      #        `<pre>${JSON.stringify(rowInfo.values, null, 2)}</pre>`
-      #    }"),
-      #    html = TRUE,
-      #    width = 60
-      #  )
-      #)
-    #})
-    
     #Quantitative search reactive - only updates on quan_search event activation
     quan_search <- eventReactive(input$quan_search, {
       withProgress(                
