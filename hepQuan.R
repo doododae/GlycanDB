@@ -2,7 +2,16 @@ source('quanSearch.R')
 source('gaussianSmooth.R')
 
 #start and end refer to scan start & scan end
-hepQuan <- function(scan, iso, ppm, data, minscan, start, end, dp_lwr, dp_upr) {
+hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr) {
+  
+  if(db == "1014pnp") {
+    db_path ="db/hs_pnp_10_14mer_library.tsv"
+  }
+  else if(db == "0430pnp") {
+    db_path = "db/hs_pnp_4_30mer_library.tsv"
+  }
+  
+  data = read.table(file = db_path , sep = '\t', header = TRUE)
   
   # Step1: TIC grouping
   scan_starting = scan$scan_num[1] - 1

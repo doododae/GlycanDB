@@ -68,6 +68,12 @@ ui <- dashboardPage(
         fluidRow(
           box(title=strong("HepQual"),status = "info",width = 3,
               h4('Qual Filter:'),
+              selectizeInput("db", "Select DB:",
+                             choices = c("HS 10-14mer pNP" = "1014pnp",
+                                         "HS 4-30mer pNP" = "0430pnp"
+                             ),
+                             multiple = FALSE
+              ),
               numericInput( 
                 "mz", 
                 "m/z", 
@@ -89,9 +95,7 @@ ui <- dashboardPage(
                 max = 30,
                 value = 5
               ),
-              selectizeInput(
-                'iso_peak', 
-                'Is input m/z a monoisotopic peak?', 
+              selectizeInput('iso_peak', 'Is input m/z a monoisotopic peak?', 
                 choices = c('Yes' = 'yes', 'No' = 'no'),
                 multiple = FALSE
               ),
@@ -114,6 +118,13 @@ ui <- dashboardPage(
               fileInput("iso", "Upload iso.csv",
                 multiple = FALSE,
                 accept=c("text/csv", "text/comma-separated-values,text/plain", ".csv")
+              ),
+              h4('Select DB'),
+              selectizeInput("db", "Select DB:",
+                choices = c("HS 10-14mer pNP" = "1014pnp",
+                            "HS 4-30mer pNP" = "0430pnp"
+                          ),
+                multiple = FALSE
               ),
               h4('PPM'),
               numericInput("quan_ppm", "PPM",min = 0, max = 30, value = 15),
@@ -146,34 +157,35 @@ ui <- dashboardPage(
 
 # Define server logic here
 server <- function(input, output, session) {
-    db_location = 'db/hs-library.tsv'
+    #hs_10_14 = 'input$db/hs_pnp_10_14mer_library.tsv'
     
-    db <- read.table(file = db_location, sep = '\t', header = TRUE)
+    
+    #input$db <- read.table(file = db_location, sep = '\t', header = TRUE)
 
-    outp_db <- db
+    #outp_db <- input$db
     
     #initial qualitative table render - i might be able to put it elsewhere?
-    output$db_table <- renderReactable({ 
-      reactable(outp_db, 
+    #output$db_table <- renderReactable({ 
+      #reactable(outp_db, 
         # ALL COLUMNS (name, HexA, HexN, Ac, S, formula, neutral_mass, floating_Na, floating_NH3)
-        columns = list(
-          DP = colDef(show = F),
-          formula = colDef(show = F),
-          floating_Na = colDef(show = F),
-          floating_NH3 = colDef(show = F)
-        ),
-        defaultColDef = colDef(show = T), 
-        details = colDef(
-          name = "More",
-          details = JS("function(rowInfo) {
-            return `Details for row: ${rowInfo.index}` +
-              `<pre>${JSON.stringify(rowInfo.values, null, 2)}</pre>`
-          }"),
-          html = TRUE,
-          width = 60
-        )
-      )
-    })
+      #  columns = list(
+      #    DP = colDef(show = F),
+      #    formula = colDef(show = F),
+      #    floating_Na = colDef(show = F),
+      #    floating_NH3 = colDef(show = F)
+      #  ),
+      #  defaultColDef = colDef(show = T), 
+      #  details = colDef(
+      #    name = "More",
+      #    details = JS("function(rowInfo) {
+      #     return `Details for row: ${rowInfo.index}` +
+      #        `<pre>${JSON.stringify(rowInfo.values, null, 2)}</pre>`
+      #    }"),
+      #    html = TRUE,
+      #    width = 60
+      #  )
+      #)
+    #})
     
     #Quantitative search reactive - only updates on quan_search event activation
     quan_search <- eventReactive(input$quan_search, {
@@ -187,7 +199,7 @@ server <- function(input, output, session) {
             req(input$iso)
             iso <- read.csv(input$iso$datapath, header = TRUE)
             quan_outp <- hepQuan(
-              scan, iso, input$quan_ppm, db, 
+              scan, iso, input$quan_ppm, input$db, 
               input$minscan, input$start, input$end, 
               input$dp_lwr, input$dp_upr
             )
@@ -201,7 +213,7 @@ server <- function(input, output, session) {
     
     #Qualitative search reactive - only updates on qual_search event activation
     qual_search <- eventReactive(input$qual_search, {
-      return(qualSearch(input$mz, input$charge, input$ppm, input$iso_peak, db))
+      return(qualSearch(input$mz, input$charge, input$ppm, input$iso_peak, input$db))
     })
     
     #Quan Search Event Listener
