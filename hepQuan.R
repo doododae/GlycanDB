@@ -4,11 +4,19 @@ source('gaussianSmooth.R')
 #start and end refer to scan start & scan end
 hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr) {
   
-  if(db == "1014pnp") {
-    db_path ="db/hs_pnp_10_14mer_library.tsv"
+  path = db;
+  
+  if(path == "1014pnpnh3") {
+    db_path ="db/hs_pnp_10_14mer_NH3.tsv"
   }
-  else if(db == "0430pnp") {
-    db_path = "db/hs_pnp_4_30mer_library.tsv"
+  else if(path == "0430pnp") {
+    db_path = "db/hs_pnp_4_30mer.tsv"
+  }
+  else if(path == "1014pnpnh3na") {
+    db_path = "db/hs_pnp_10_14mer_NH3_Na.tsv"
+  }
+  else if(path == "1014pnpnh3mn") {
+    db_path = "db/hs_pnp_10_14mer_NH3_Mn.tsv"
   }
   
   data = read.table(file = db_path , sep = '\t', header = TRUE)
@@ -100,7 +108,18 @@ hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr) {
                 mutate(time = iso$time[i])
     #delete high adductive
     #Adduct (NH3+Na) < S + HexA + charge – 2
-    res_temp <- filter(res_temp, res_temp$floating_Na + res_temp$floating_NH3 < res_temp$S + res_temp$HexA + res_temp$charge - 2)
+    if(path == "1014pnpnh3") {
+      res_temp <- filter(res_temp, res_temp$floating_NH3 < res_temp$S + res_temp$HexA + res_temp$charge - 2)
+    }
+    else if(path == "0430pnp") {
+      res_temp <- filter(res_temp, res_temp$floating_Na + res_temp$floating_NH3 < res_temp$S + res_temp$HexA + res_temp$charge - 2)
+    }
+    else if(path == "1014pnpnh3na") {
+      res_temp <- filter(res_temp, res_temp$floating_Na + res_temp$floating_NH3 < res_temp$S + res_temp$HexA + res_temp$charge - 2)
+    }
+    else if(path == "1014pnpnh3mn") {
+      res_temp <- filter(res_temp, res_temp$floating_Mn + res_temp$floating_NH3 < res_temp$S + res_temp$HexA + res_temp$charge - 2)
+    }
     result <- bind_rows(result, res_temp)
   }
   
@@ -157,20 +176,52 @@ hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr) {
   
   if(nrow(result) != 0) {
     #Column names (name, HexA, HexN, Ac, S, formula, neutral_mass, floating_Na, floating_NH3)
-    result <- result %>%
-      group_by(name, charge, floating_Na, floating_NH3) %>%
-      summarise(
-        neutral_mass = mean(neutral_mass),
-        #Adductive = mean(Adductive),
-        DP = mean(DP),
-        mz = round(mean(mz), 4),
-        mono_mw = round(mean(mono_mw), 4),
-        abundance = sum(abundance),
-        time = median(time),
-        gaussian = max(gaussian),
-        scan_count=sum(scan_count),
-        scan_range=sum(scan_range)
-      )
+    if(hasName(result, "floating_Na")) {
+      result <- result %>%
+        group_by(name, charge, floating_Na, floating_NH3) %>%
+        summarise(
+          neutral_mass = mean(neutral_mass),
+          #Adductive = mean(Adductive),
+          DP = mean(DP),
+          mz = round(mean(mz), 4),
+          mono_mw = round(mean(mono_mw), 4),
+          abundance = sum(abundance),
+          time = median(time),
+          gaussian = max(gaussian),
+          scan_count=sum(scan_count),
+          scan_range=sum(scan_range)
+        )
+    } else if(hasName(result, "floating_Mn")) {
+      result <- result %>%
+        group_by(name, charge, floating_Mn, floating_NH3) %>%
+        summarise(
+          neutral_mass = mean(neutral_mass),
+          #Adductive = mean(Adductive),
+          DP = mean(DP),
+          mz = round(mean(mz), 4),
+          mono_mw = round(mean(mono_mw), 4),
+          abundance = sum(abundance),
+          time = median(time),
+          gaussian = max(gaussian),
+          scan_count=sum(scan_count),
+          scan_range=sum(scan_range)
+        )
+    } else {
+      result <- result %>%
+        group_by(name, charge, floating_NH3) %>%
+        summarise(
+          neutral_mass = mean(neutral_mass),
+          #Adductive = mean(Adductive),
+          DP = mean(DP),
+          mz = round(mean(mz), 4),
+          mono_mw = round(mean(mono_mw), 4),
+          abundance = sum(abundance),
+          time = median(time),
+          gaussian = max(gaussian),
+          scan_count=sum(scan_count),
+          scan_range=sum(scan_range)
+        )
+    }
     
     if(nrow(result) > 30) {
       result <- filter(result, scan_range >= minscan)

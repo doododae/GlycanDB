@@ -1,10 +1,16 @@
 qualSearch <- function(mz, charge, ppm, iso_peak, path) {
 
-  if(path == "1014pnp") {
-    db_path ="db/hs_pnp_10_14mer_library.tsv"
+  if(path == "1014pnpnh3") {
+    db_path ="db/hs_pnp_10_14mer_NH3.tsv"
   }
   else if(path == "0430pnp") {
-    db_path = "db/hs_pnp_4_30mer_library.tsv"
+    db_path = "db/hs_pnp_4_30mer.tsv"
+  }
+  else if(path == "1014pnpnh3na") {
+    db_path = "db/hs_pnp_10_14mer_NH3_Na.tsv"
+  }
+  else if(path == "1014pnpnh3mn") {
+    db_path = "db/hs_pnp_10_14mer_NH3_Mn.tsv"
   }
   
   db = read.table(file = db_path , sep = '\t', header = TRUE)

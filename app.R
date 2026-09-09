@@ -69,8 +69,10 @@ ui <- dashboardPage(
           box(title=strong("HepQual"),status = "info",width = 3,
               h4('Qual Filter:'),
               selectizeInput("db", "Select DB:",
-                             choices = c("HS 10-14mer pNP" = "1014pnp",
-                                         "HS 4-30mer pNP" = "0430pnp"
+                             choices = c("4-30mer pNP" = "0430pnp",
+                                         "10-14mer pNP NH3" = "1014pnpnh3",
+                                         "10-14mer pNP NH3/Mn" = "1014pnpnh3mn",
+                                         "10-14mer pNP NH3/Na" = "1014pnpnh3na"
                              ),
                              multiple = FALSE
               ),
@@ -121,8 +123,10 @@ ui <- dashboardPage(
               ),
               h4('Select DB'),
               selectizeInput("db", "Select DB:",
-                choices = c("HS 10-14mer pNP" = "1014pnp",
-                            "HS 4-30mer pNP" = "0430pnp"
+                choices = c("4-30mer pNP" = "0430pnp",
+                            "10-14mer pNP NH3" = "1014pnpnh3",
+                            "10-14mer pNP NH3/Mn" = "1014pnpnh3mn",
+                            "10-14mer pNP NH3/Na" = "1014pnpnh3na"
                           ),
                 multiple = FALSE
               ),
