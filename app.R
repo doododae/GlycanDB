@@ -21,6 +21,7 @@ source('hepQuan.R')
 source('qualSearch.R')
 source('quanSummary.R')
 source('quanDetails.R')
+source('shiftGen.R')
 
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
@@ -67,12 +68,10 @@ ui <- dashboardPage(
         ),
         fluidRow(
           box(title=strong("HepQual"),status = "info",width = 3,
-              h4('Qual Filter:'),
               selectizeInput("db", "Select DB:",
-                             choices = c("4-30mer pNP" = "0430pnp",
-                                         "10-14mer pNP NH3" = "1014pnpnh3",
-                                         "10-14mer pNP NH3/Mn" = "1014pnpnh3mn",
-                                         "10-14mer pNP NH3/Na" = "1014pnpnh3na"
+                             choices = c(
+                               "test db" = "db/test_backbone_database.tsv",
+                               "test db2" = "db/hs_pnp_4_30mer.tsv"
                              ),
                              multiple = FALSE
               ),
@@ -101,6 +100,11 @@ ui <- dashboardPage(
                 choices = c('Yes' = 'yes', 'No' = 'no'),
                 multiple = FALSE
               ),
+              h4('Adducts - Long Load Time'),
+                numericInput("qual_Na", "Na", min = 0, max = 10, value = 5),
+                numericInput("qual_NH3", "NH3", min = 0, max = 10, value = 5),
+                numericInput("qual_Mn", "Mn", min = 0, max = 10, value = 5),
+                numericInput("qual_FA", "FA", min = 0, max = 10, value = 5),
               actionButton("qual_search", "Search")
           ),
           box(title="Result:",width = 9,
@@ -123,15 +127,18 @@ ui <- dashboardPage(
               ),
               h4('Select DB'),
               selectizeInput("db", "Select DB:",
-                choices = c("4-30mer pNP" = "0430pnp",
-                            "10-14mer pNP NH3" = "1014pnpnh3",
-                            "10-14mer pNP NH3/Mn" = "1014pnpnh3mn",
-                            "10-14mer pNP NH3/Na" = "1014pnpnh3na"
+                choices = c(
+                            "test db" = "db/test_backbone_database.tsv"
                           ),
                 multiple = FALSE
               ),
+              h4('Adducts - Long Load Time'),
+              numericInput("quan_Na", "Na", min = 0, max = 10, value = 5),
+              numericInput("quan_NH3", "NH3", min = 0, max = 10, value = 5),
+              numericInput("quan_Mn", "Mn", min = 0, max = 10, value = 5),
+              numericInput("quan_FA", "FA", min = 0, max = 10, value = 5),
               h4('PPM'),
-              numericInput("quan_ppm", "PPM",min = 0, max = 30, value = 15),
+              numericInput("quan_ppm", "PPM",min = 0, max = 100, value = 15),
               h4('DP Range'),
               splitLayout(
                 numericInput("dp_lwr", "Start",min = 0, max = 1000, value = 4),
@@ -176,7 +183,8 @@ server <- function(input, output, session) {
             quan_outp <- hepQuan(
               scan, iso, input$quan_ppm, input$db, 
               input$minscan, input$start, input$end, 
-              input$dp_lwr, input$dp_upr
+              input$dp_lwr, input$dp_upr,
+              input$quan_Na, input$quan_NH3, input$quan_Mn, input$quan_FA
             )
             return(quan_outp)
             incProgress(1/15)
@@ -188,7 +196,21 @@ server <- function(input, output, session) {
     
     #Qualitative search reactive - only updates on qual_search event activation
     qual_search <- eventReactive(input$qual_search, {
-      return(qualSearch(input$mz, input$charge, input$ppm, input$iso_peak, input$db))
+      withProgress(                
+        message = 'Calculating',
+        detail = 'This may take a while...', 
+        value = 0, {
+          for (i in 1:10) {
+            qual_outp <- qualSearch(input$mz, input$charge, 
+                                    input$ppm, input$iso_peak, input$db, 
+                                    input$qual_Na, input$qual_NH3, input$quan_Mn, input$quan_FA
+                                    )
+            return(qual_outp)
+            incProgress(1/15)
+            Sys.sleep(0.25)
+          }
+        }
+      )
     })
     
     #Quan Search Event Listener

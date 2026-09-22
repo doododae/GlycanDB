@@ -1,23 +1,11 @@
 source('quanSearch.R')
 source('gaussianSmooth.R')
+library(data.table)
 
 #start and end refer to scan start & scan end
-hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr) {
+hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr, na, nh, mn, fa) {
   
-  path = db;
-  
-  if(path == "1014pnpnh3") {
-    db_path ="db/hs_pnp_10_14mer_NH3.tsv"
-  }
-  else if(path == "0430pnp") {
-    db_path = "db/hs_pnp_4_30mer.tsv"
-  }
-  else if(path == "1014pnpnh3na") {
-    db_path = "db/hs_pnp_10_14mer_NH3_Na.tsv"
-  }
-  else if(path == "1014pnpnh3mn") {
-    db_path = "db/hs_pnp_10_14mer_NH3_Mn.tsv"
-  }
+  db_path = "db/test_backbone_database.tsv"
   
   data = read.table(file = db_path , sep = '\t', header = TRUE)
   
@@ -96,37 +84,35 @@ hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr) {
   
   result <- data.frame(stringsAsFactors=FALSE)
   
+  shifts <- getShifts(na, nh, mn, fa)
+  
   for(i in c(1:nrow(iso))) {
-    res_temp <- quanSearch(iso$mono_mw[i], ppm, data) %>%
-                mutate(peak_no = iso$peak.No[i]) |>
-                mutate(charge = iso$charge[i]) |>
-                mutate(mz = iso$mz[i]) |>
-                mutate(mono_mw = iso$mono_mw[i]) |>
-                mutate(abundance = iso$abundance[i]) |>
-                mutate(scan_range = iso$scan_range[i]) |>
-                mutate(scan_count = iso$scan_count[i]) |>
-                mutate(time = iso$time[i])
+    for(x in c(1:nrow(shifts))) {
+      mass = iso$mono_mw[i] - shifts$shift[x]
+      res_temp <- quanSearch(mass, ppm, data) %>%
+        mutate(peak_no = iso$peak.No[i]) |>
+        mutate(charge = iso$charge[i]) |>
+        mutate(mz = iso$mz[i]) |>
+        mutate(mono_mw = iso$mono_mw[i]+shifts$shift[x]) |>
+        mutate(abundance = iso$abundance[i]) |>
+        mutate(scan_range = iso$scan_range[i]) |>
+        mutate(scan_count = iso$scan_count[i]) |>
+        mutate(time = iso$time[i]) |>
+        mutate(NH3 = shifts$NH3[x]) |>
+        mutate(Na = shifts$Na[x]) |>
+        mutate(Mn = shifts$Mn[x]) |>
+        mutate(FA = shifts$FA[x])
+    }
     #delete high adductive
-    #Adduct (NH3+Na) < S + HexA + charge – 2
-    if(path == "1014pnpnh3") {
-      res_temp <- filter(res_temp, res_temp$floating_NH3 < res_temp$S + res_temp$HexA + res_temp$charge - 2)
-    }
-    else if(path == "0430pnp") {
-      res_temp <- filter(res_temp, res_temp$floating_Na + res_temp$floating_NH3 < res_temp$S + res_temp$HexA + res_temp$charge - 2)
-    }
-    else if(path == "1014pnpnh3na") {
-      res_temp <- filter(res_temp, res_temp$floating_Na + res_temp$floating_NH3 < res_temp$S + res_temp$HexA + res_temp$charge - 2)
-    }
-    else if(path == "1014pnpnh3mn") {
-      res_temp <- filter(res_temp, res_temp$floating_Mn + res_temp$floating_NH3 < res_temp$S + res_temp$HexA + res_temp$charge - 2)
-    }
+    #Adduct (NH3+Na+Mn+FA) < S + HexA + charge – 2
+    #res_temp <- filter(res_temp, res_temp$Mn + res_temp$NH3 + res_temp$Na + res_temp$FA < res_temp$S + res_temp$HexA + res_temp$charge - 2)
     result <- bind_rows(result, res_temp)
   }
   
   rm(res_temp)
   
   #delete not matched peaks & filter within DP range
-  result <- filter(result, neutral_mass != 0 & between(DP, dp_lwr, dp_upr)) 
+  result <- filter(result, result$neutral_mass != 0 & between(result$DP, dp_lwr, dp_upr)) 
   
   #result <- result[,c("neutral_mass","Structure","Adduct","dp","ppm","peak.No","charge","mz","mono_mw","scan_range","abundance","scan_count","time")]
   
@@ -176,52 +162,21 @@ hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr) {
   
   if(nrow(result) != 0) {
     #Column names (name, HexA, HexN, Ac, S, formula, neutral_mass, floating_Na, floating_NH3)
-    if(hasName(result, "floating_Na")) {
-      result <- result %>%
-        group_by(name, charge, floating_Na, floating_NH3) %>%
-        summarise(
-          neutral_mass = mean(neutral_mass),
-          #Adductive = mean(Adductive),
-          DP = mean(DP),
-          mz = round(mean(mz), 4),
-          mono_mw = round(mean(mono_mw), 4),
-          abundance = sum(abundance),
-          time = median(time),
-          gaussian = max(gaussian),
-          scan_count=sum(scan_count),
-          scan_range=sum(scan_range)
-        )
-    } else if(hasName(result, "floating_Mn")) {
-      result <- result %>%
-        group_by(name, charge, floating_Mn, floating_NH3) %>%
-        summarise(
-          neutral_mass = mean(neutral_mass),
-          #Adductive = mean(Adductive),
-          DP = mean(DP),
-          mz = round(mean(mz), 4),
-          mono_mw = round(mean(mono_mw), 4),
-          abundance = sum(abundance),
-          time = median(time),
-          gaussian = max(gaussian),
-          scan_count=sum(scan_count),
-          scan_range=sum(scan_range)
-        )
-    } else {
-      result <- result %>%
-        group_by(name, charge, floating_NH3) %>%
-        summarise(
-          neutral_mass = mean(neutral_mass),
-          #Adductive = mean(Adductive),
-          DP = mean(DP),
-          mz = round(mean(mz), 4),
-          mono_mw = round(mean(mono_mw), 4),
-          abundance = sum(abundance),
-          time = median(time),
-          gaussian = max(gaussian),
-          scan_count=sum(scan_count),
-          scan_range=sum(scan_range)
-        )
-    }
+    result <- result %>%
+      group_by(name, charge, NH3, Na, Mn, FA) %>%
+      summarise(
+        neutral_mass = mean(neutral_mass),
+        #Adductive = mean(Adductive),
+        DP = mean(DP),
+        mz = round(mean(mz), 4),
+        mono_mw = round(mean(mono_mw), 4),
+        abundance = sum(abundance),
+        time = median(time),
+        ppm = round(mean(ppm), 2),
+        gaussian = max(gaussian),
+        scan_count=sum(scan_count),
+        scan_range=sum(scan_range)
+      )
     
     if(nrow(result) > 30) {
       result <- filter(result, scan_range >= minscan)
