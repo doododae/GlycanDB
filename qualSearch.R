@@ -18,7 +18,7 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa) {
           peak_mass = round(exp_mass - (i-1) * 1.00335, 5)
           
           data <- filter(db, ppm >= abs((neutral_mass - peak_mass) / peak_mass * 10^6)) |>
-                  mutate("Exp Mass" = peak_mass) |>
+                  mutate("Exp Mass" = peak_mass + shifts$shift[x]) |>
                   mutate("Iso Peak" = i) |>
                   mutate("Na" = shifts$Na[x]) |>
                   mutate("NH3" = shifts$NH3[x]) |>
@@ -38,7 +38,7 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa) {
       }
       else {
         data <- filter(db, ppm >= abs((neutral_mass - exp_mass) / exp_mass * 10^6)) |>
-                    mutate(exp_mass = exp_mass) |>
+                    mutate(exp_mass = exp_mass + shifts$shift[x]) |>
                     mutate("Na" = shifts$Na[x]) |>
                     mutate("NH3" = shifts$NH3[x]) |>
                     mutate("Mn" = shifts$Mn[x]) |>
