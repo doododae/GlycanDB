@@ -6,8 +6,9 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa) {
   
   outp_db <- db
   
+  shifts <- getShifts(na, nh, mn, fa)
+  
   if(!is.na(mz) && !is.na(charge) && !is.na(ppm)) {
-    shifts <- getShifts(na, nh, mn, fa)
     result <- data.frame(stringsAsFactors = FALSE) 
     for(x in c(1:nrow(shifts))) {
       #experimental mass formula --- (mz * charge + charge * 1.0078) - shift
@@ -37,7 +38,7 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa) {
         outp_db <- result
       }
       else {
-        data <- filter(db, ppm >= abs((neutral_mass - exp_mass + shifts$shift[x]) / (exp_mass + shifts$shift[x]) * 10^6)) |>
+        data <- filter(db, ppm >= abs((neutral_mass - exp_mass) / exp_mass * 10^6)) |>
                     mutate(exp_mass = exp_mass + shifts$shift[x]) |>
                     mutate("Na" = shifts$Na[x]) |>
                     mutate("NH3" = shifts$NH3[x]) |>

@@ -92,7 +92,7 @@ ui <- dashboardPage(
                 choices = c('Yes' = 'yes', 'No' = 'no'),
                 multiple = FALSE
               ),
-              h4('Adducts - Long Load Time'),
+              h4('Adducts'),
                 numericInput("qual_Na", "Na", min = 0, max = 10, value = 5),
                 numericInput("qual_NH3", "NH3", min = 0, max = 10, value = 5),
                 numericInput("qual_Mn", "Mn", min = 0, max = 10, value = 5),
@@ -195,7 +195,7 @@ server <- function(input, output, session) {
           for (i in 1:10) {
             qual_outp <- qualSearch(input$mz, input$charge, 
                                     input$ppm, input$iso_peak, input$db, 
-                                    input$qual_Na, input$qual_NH3, input$quan_Mn, input$quan_FA
+                                    input$qual_Na, input$qual_NH3, input$qual_Mn, input$qual_FA
                                     )
             return(qual_outp)
             incProgress(1/15)

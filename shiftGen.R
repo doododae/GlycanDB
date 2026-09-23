@@ -1,4 +1,4 @@
-getShifts <- function(na, nh, mn, fa) {
+getShifts <- function(na = 0, nh = 0, mn = 0, fa = 0) {
   #create an adduct shifts combination matrix with user input
   
   adducts <- data.frame(
@@ -28,6 +28,8 @@ getShifts <- function(na, nh, mn, fa) {
   })
   
   counts <- counts[counts$combo != "none", ]
+  
+  print(counts)
   
   return(counts)
 }
