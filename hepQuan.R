@@ -88,12 +88,11 @@ hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr, na,
   
   for(i in c(1:nrow(iso))) {
     for(x in c(1:nrow(shifts))) {
-      mass = iso$mono_mw[i] - shifts$shift[x]
-      res_temp <- quanSearch(mass, ppm, data) %>%
+      res_temp <- quanSearch(iso$mono_mw[i], ppm, data, shifts$shift[x]) %>%
         mutate(peak_no = iso$peak.No[i]) |>
         mutate(charge = iso$charge[i]) |>
         mutate(mz = iso$mz[i]) |>
-        mutate(mono_mw = iso$mono_mw[i]+shifts$shift[x]) |>
+        mutate(mono_mw = iso$mono_mw[i] + shifts$shift[x]) |>
         mutate(abundance = iso$abundance[i]) |>
         mutate(scan_range = iso$scan_range[i]) |>
         mutate(scan_count = iso$scan_count[i]) |>

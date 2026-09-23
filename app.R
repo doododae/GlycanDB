@@ -59,14 +59,6 @@ ui <- dashboardPage(
       tabItem(tabName = "MS",
         #hep qual searching
         fluidRow(
-          box(title=strong('User Guide'),status='warning',width = 10,
-              solidHeader = FALSE,
-              collapsible = TRUE,
-              collapsed = FALSE,
-              closable = FALSE
-          )
-        ),
-        fluidRow(
           box(title=strong("HepQual"),status = "info",width = 3,
               selectizeInput("db", "Select DB:",
                              choices = c(

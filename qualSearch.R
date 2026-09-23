@@ -24,7 +24,7 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa) {
                   mutate("NH3" = shifts$NH3[x]) |>
                   mutate("Mn" = shifts$Mn[x]) |>
                   mutate("FA" = shifts$FA[x]) |>
-                  mutate(ppm = abs(round(((neutral_mass - peak_mass) / peak_mass * 10^6), 2)))
+                  mutate(ppm = abs(round(((neutral_mass - peak_mass + shifts$shift[x]) / (peak_mass + shifts$shift[x]) * 10^6), 2)))
           
           if(count(data) > 0) {
             result <- bind_rows(result, data)
@@ -37,13 +37,13 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa) {
         outp_db <- result
       }
       else {
-        data <- filter(db, ppm >= abs((neutral_mass - exp_mass) / exp_mass * 10^6)) |>
+        data <- filter(db, ppm >= abs((neutral_mass - exp_mass + shifts$shift[x]) / (exp_mass + shifts$shift[x]) * 10^6)) |>
                     mutate(exp_mass = exp_mass + shifts$shift[x]) |>
                     mutate("Na" = shifts$Na[x]) |>
                     mutate("NH3" = shifts$NH3[x]) |>
                     mutate("Mn" = shifts$Mn[x]) |>
                     mutate("FA" = shifts$FA[x]) |>
-                    mutate(ppm = abs(round(((neutral_mass - exp_mass) / exp_mass * 10^6), 2)))
+                    mutate(ppm = abs(round(((neutral_mass - exp_mass + shifts$shift[x]) / (exp_mass + shifts$shift[x]) * 10^6), 2)))
         if(count(data) > 0) {
           result <- bind_rows(result, data)
           out_db <- result
