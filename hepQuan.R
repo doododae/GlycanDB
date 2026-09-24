@@ -2,30 +2,41 @@ source('quanSearch.R')
 source('gaussianSmooth.R')
 library(data.table)
 
-#start and end refer to scan start & scan end
-hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr, na, nh, mn, fa) {
+# scans.csv, isos.csv, ppm filter, database, 
+# scan interval, scan start time, scan end time 
+# dp lower bound, dp upper bound 
+# Adducts - NA, NH3, Mn, FA
+# smoothing window, findpeaks nups, findpeaks ndowns, findpeaks threshold, TIC grouping filter
+hepQuan <- function(scan, iso, ppm, db, 
+                    minscan, start, end, 
+                    dp_lwr, dp_upr, 
+                    na, nh, mn, fa, 
+                    window = 100, nups = 3, ndowns = 3, threshold = 2, ticfilter = .95) {
   
   db_path = "db/test_backbone_database.tsv"
   
   data = read.table(file = db_path , sep = '\t', header = TRUE)
   
-  # Step1: TIC grouping
+  # Filter db table based on DP range
+  data <- filter(data, between(data$DP, dp_lwr, dp_upr))
+  
+  # Step 1: TIC grouping
   scan_starting = scan$scan_num[1] - 1
   scan$scan_num <- scan$scan_num - scan_starting
   iso$scan_num <- iso$scan_num - scan_starting
   
   
-  #peak smoothing, if scan num <1000, skip TIC grouping step
+  #peak smoothing, if scan num <100, skip TIC grouping step
   if(nrow(scan) > 100){
-    peaks <- gaussianSmooth(scan$tic, window = 100)
+    peaks <- gaussianSmooth(scan$tic, window)
     peaks[which(is.na(peaks))] <- 0
     peaks <- as.numeric(peaks)
     #TIC grouping
-    tic_group <- findpeaks(peaks,nups = 3, ndowns = 3, threshold = 2)
+    tic_group <- findpeaks(peaks, nups = nups, ndowns = ndowns, threshold = threshold)
     tic_group <- as.data.frame(tic_group)
     
     #TIC grouping filter
-    tic_group <- tic_group[which(scan$tic[tic_group$V2] * 0.95 > scan$tic[tic_group$V3]),]
+    tic_group <- tic_group[which(scan$tic[tic_group$V2] * ticfilter > scan$tic[tic_group$V3]),]
   }
   else {
     tic_group <-as.data.frame(matrix(0, 1, 1))
@@ -82,8 +93,9 @@ hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr, na,
   #delete peaks with scan number
   iso <- filter(iso, scan_range >= minscan)
   
-  result <- data.frame(stringsAsFactors=FALSE)
+  result <- data.frame(stringsAsFactors = FALSE)
   
+  #returns shift combo matrix
   shifts <- getShifts(na, nh, mn, fa)
   
   for(i in c(1:nrow(iso))) {
@@ -110,8 +122,8 @@ hepQuan <- function(scan, iso, ppm, db, minscan, start, end, dp_lwr, dp_upr, na,
   
   rm(res_temp)
   
-  #delete not matched peaks & filter within DP range
-  result <- filter(result, result$neutral_mass != 0 & between(result$DP, dp_lwr, dp_upr)) 
+  #delete not matched peaks
+  result <- filter(result, result$neutral_mass != 0) 
   
   #result <- result[,c("neutral_mass","Structure","Adduct","dp","ppm","peak.No","charge","mz","mono_mw","scan_range","abundance","scan_count","time")]
   

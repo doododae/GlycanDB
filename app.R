@@ -93,10 +93,26 @@ ui <- dashboardPage(
                 multiple = FALSE
               ),
               h4('Adducts'),
-                numericInput("qual_Na", "Na", min = 0, max = 10, value = 5),
-                numericInput("qual_NH3", "NH3", min = 0, max = 10, value = 5),
-                numericInput("qual_Mn", "Mn", min = 0, max = 10, value = 5),
-                numericInput("qual_FA", "FA", min = 0, max = 10, value = 5),
+              checkboxInput("show_qualna", "Show Na", value = FALSE),
+              conditionalPanel(
+                condition = "input.show_qualna == true",
+                numericInput("qual_Na", "Na", min = 0, max = 10, value = 0)
+              ),
+              checkboxInput("show_qualnh", "Show NH3", value = FALSE),
+              conditionalPanel(
+                condition = "input.show_qualnh == true",
+                numericInput("qual_NH3", "NH3", min = 0, max = 10, value = 0)
+              ),
+              checkboxInput("show_qualmn", "Show Mn", value = FALSE),
+              conditionalPanel(
+                condition = "input.show_qualmn == true",
+                numericInput("qual_Mn", "Mn", min = 0, max = 10, value = 0)
+              ),
+              checkboxInput("show_qualfa", "Show FA", value = FALSE),
+              conditionalPanel(
+                condition = "input.show_qualfa == true",
+                numericInput("qual_FA", "FA", min = 0, max = 10, value = 0)
+              ),
               actionButton("qual_search", "Search")
           ),
           box(title="Result:",width = 9,
@@ -117,18 +133,34 @@ ui <- dashboardPage(
                 multiple = FALSE,
                 accept=c("text/csv", "text/comma-separated-values,text/plain", ".csv")
               ),
-              h4('Select DB'),
               selectizeInput("db", "Select DB:",
                 choices = c(
-                            "test db" = "db/test_backbone_database.tsv"
+                            "test db" = "db/test_backbone_database.tsv",
+                            "4-30 mer" = "db/hs_pnp_4_30mer.tsv"
                           ),
                 multiple = FALSE
               ),
-              h4('Adducts - Long Load Time'),
-              numericInput("quan_Na", "Na", min = 0, max = 10, value = 5),
-              numericInput("quan_NH3", "NH3", min = 0, max = 10, value = 5),
-              numericInput("quan_Mn", "Mn", min = 0, max = 10, value = 5),
-              numericInput("quan_FA", "FA", min = 0, max = 10, value = 5),
+              h4('Adducts'),
+              checkboxInput("show_na", "Show Na", value = FALSE),
+              conditionalPanel(
+                condition = "input.show_na == true",
+                numericInput("quan_Na", "Na", min = 0, max = 10, value = 0)
+              ),
+              checkboxInput("show_nh", "Show NH3", value = FALSE),
+              conditionalPanel(
+                condition = "input.show_nh == true",
+                numericInput("quan_NH3", "NH3", min = 0, max = 10, value = 0)
+              ),
+              checkboxInput("show_mn", "Show Mn", value = FALSE),
+              conditionalPanel(
+                condition = "input.show_mn == true",
+                numericInput("quan_Mn", "Mn", min = 0, max = 10, value = 0)
+              ),
+              checkboxInput("show_fa", "Show FA", value = FALSE),
+              conditionalPanel(
+                condition = "input.show_fa == true",
+                numericInput("quan_FA", "FA", min = 0, max = 10, value = 0)
+              ),
               h4('PPM'),
               numericInput("quan_ppm", "PPM",min = 0, max = 100, value = 15),
               h4('DP Range'),
@@ -138,11 +170,20 @@ ui <- dashboardPage(
               ),
               h4('Elution Time (Min)'),
               splitLayout(
-                numericInput("start", "Start",min = 0, max = 1000, value = 25),
-                numericInput("end", "End",min = 0, max = 1000, value = 50)
+                numericInput("start", "Start", min = 0, max = 1000, value = 25),
+                numericInput("end", "End", min = 0, max = 1000, value = 50)
               ),
               splitLayout(
-                numericInput("minscan", "Min Scan Number",min = 0, max = 200, value = 15)
+                numericInput("minscan", "Min Scan Number", min = 0, max = 200, value = 15)
+              ),
+              checkboxInput("show_input", "Advanced Settings", value = FALSE),
+              conditionalPanel(
+                condition = "input.show_input == true",
+                numericInput("window", "Gaussian Smoothing Window", min = 0, max = 10000, value = 100),
+                numericInput("nups", "findpeaks nups", min = 0, max = 100, value = 3),
+                numericInput("ndowns", "findpeaks ndowns", min = 0, max = 100, value = 3),
+                numericInput("threshold", "findpeaks threshold", min = 0, max = 100, value = 2),
+                numericInput("ticfilter", "TIC grouping filter", min = 0, max = 1, step = 0.01, value = 0.95)
               ),
               actionButton("quan_search", "Search")
           ),
@@ -176,7 +217,8 @@ server <- function(input, output, session) {
               scan, iso, input$quan_ppm, input$db, 
               input$minscan, input$start, input$end, 
               input$dp_lwr, input$dp_upr,
-              input$quan_Na, input$quan_NH3, input$quan_Mn, input$quan_FA
+              input$quan_Na, input$quan_NH3, input$quan_Mn, input$quan_FA,
+              input$window, input$nups, input$ndowns, input$threshold, input$ticfilter
             )
             return(quan_outp)
             incProgress(1/15)

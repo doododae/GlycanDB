@@ -29,7 +29,5 @@ getShifts <- function(na = 0, nh = 0, mn = 0, fa = 0) {
   
   counts <- counts[counts$combo != "none", ]
   
-  print(counts)
-  
   return(counts)
 }
