@@ -61,12 +61,13 @@ ui <- dashboardPage(
         #hep qual searching
         fluidRow(
           box(title=strong("HepQual"),status = "info",width = 3,
-              selectizeInput("db", "Select DB:",
-                             choices = c(
-                               "test db" = "db/test_backbone_database.tsv",
-                               "test db2" = "db/hs_pnp_4_30mer.tsv"
-                             ),
-                             multiple = FALSE
+              selectizeInput(
+                 "db", "Select DB:",
+                 choices = c(
+                   "4-30 mer db" = "db/hs_pnp_4_30mer_backbone.tsv",
+                   "test db" = "db/test_backbone_database.tsv"
+                 ),
+                 multiple = FALSE
               ),
               numericInput( 
                 "mz", 
@@ -136,8 +137,8 @@ ui <- dashboardPage(
               ),
               selectizeInput("db", "Select DB:",
                 choices = c(
-                            "test db" = "db/test_backbone_database.tsv",
-                            "4-30 mer" = "db/hs_pnp_4_30mer.tsv"
+                            "4-30 mer db" = "db/hs_pnp_4_30mer_backbone.tsv",
+                            "test db" = "db/test_backbone_database.tsv"
                           ),
                 multiple = FALSE
               ),

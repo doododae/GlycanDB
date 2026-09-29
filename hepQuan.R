@@ -98,8 +98,6 @@ hepQuan <- function(scan, iso, ppm, db,
   shifts <- getShifts(na = na, nh = nh, mn = mn, fa = fa)
   
   print(paste("number of shift rows:", nrow(shifts)))
-  
-  print(ppm)
 
   raw_outp <- crossing(iso, shifts) %>%
     mutate(
@@ -139,11 +137,10 @@ hepQuan <- function(scan, iso, ppm, db,
     ungroup()
   
   # delete high adductives
-  # Adduct (NH3+Na+Mn+FA) < S + HexA + charge – 2
+  # Adducts (NH3+Na+Mn+FA) < S + HexA + charge – 2
   matches <- filter(matches, adducts < S + HexA + charge - 2)
   result <- matches
-  print(matches)
-
+  
   #delete not matched peaks
   if(nrow(result) > 0) {
     result <- filter(result, result$neutral_mass != 0) 
@@ -195,7 +192,7 @@ hepQuan <- function(scan, iso, ppm, db,
       result <- result %>%
         group_by(name, charge, NH3, Na, Mn, FA) %>%
         summarise(
-          neutral_mass = mean(neutral_mass),
+          neutral_mass = round(mean(neutral_mass), 4),
           mono_mw = round(mean(mono_mw), 4),
           exp_mass = round(mean(exp_mass), 4),
           #Adductive = mean(Adductive),
@@ -205,8 +202,8 @@ hepQuan <- function(scan, iso, ppm, db,
           time = median(time),
           ppm = round(mean(ppm), 2),
           gaussian = max(gaussian),
-          scan_count=sum(scan_count),
-          scan_range=sum(scan_range)
+          scan_count= sum(scan_count),
+          scan_range= sum(scan_range)
         )
       
       if(nrow(result) > 30) {
