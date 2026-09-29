@@ -59,7 +59,7 @@ hepQuan <- function(scan, iso, ppm, db,
   #Step2 mass grouping
   
   #round monoMW
-  iso$round_mw <- round(iso$monoisotopic_mw, 4) 
+  iso$round_mw <- round(iso$monoisotopic_mw, 2) 
   
   #add each MW counts
   iso$mw_count <- 1
@@ -94,68 +94,53 @@ hepQuan <- function(scan, iso, ppm, db,
   
   print(paste("number of iso rows:", nrow(iso)))
   
-  result <- data.frame(stringsAsFactors = FALSE)
-  raw_outp <- data.frame(stringsAsFactors = FALSE)
-  
   #returns shift combo matrix
   shifts <- getShifts(na = na, nh = nh, mn = mn, fa = fa)
   
   print(paste("number of shift rows:", nrow(shifts)))
-  print(paste(shifts$combo, shifts$shift))
-  
-  for(i in c(1:nrow(iso))) {
-    for(x in c(1:nrow(shifts))) {
-      raw <- data.frame(stringsAsFactors = FALSE)
-      print(paste(i, x))
-      # + iso$charge[i] * 1.0078
-      exp_mass = iso$mono_mw[i] - shifts$shift[x]
-      raw <- raw %>%
-        mutate(
-          NH3 = shifts$NH3[x],
-          Na = shifts$Na[x],
-          Mn = shifts$Mn[x],
-          FA = shifts$FA[x],
-          shift = shifts$shift[x],
-          mono_mw = iso$mono_mw[i],
-          exp_mass = exp_mass
-        ) %>%
-        add_row(
-          NH3 = shifts$NH3[x],
-          Na = shifts$Na[x],
-          Mn = shifts$Mn[x],
-          FA = shifts$FA[x],
-          shift = round(shifts$shift[x], 5),
-          mono_mw = round(iso$mono_mw[i], 5),
-          exp_mass = round(exp_mass, 5)
-        )
-      res_temp <- quanSearch(exp_mass, ppm, data, shifts$shift[x]) %>%
-        mutate(
-          peak_no = iso$peak.No[i], 
-          charge = iso$charge[i], 
-          mz = iso$mz[i],
-          mono_mw = iso$mono_mw[i],
-          exp_mass = exp_mass,
-          abundance = iso$abundance[i],
-          scan_range = iso$scan_range[i],
-          scan_count = iso$scan_count[i],
-          time = iso$time[i],
-          NH3 = shifts$NH3[x],
-          Na = shifts$Na[x],
-          Mn = shifts$Mn[x],
-          FA = shifts$FA[x]
-        )
-      # delete high adductive
-      # Adduct (NH3+Na+Mn+FA) < S + HexA + charge – 2
-      adducts = res_temp$Mn + res_temp$NH3 + res_temp$Na + res_temp$FA
-      res_temp <- filter(res_temp, adducts < res_temp$S + res_temp$HexA + res_temp$charge - 2)
-      result <- bind_rows(result, res_temp)
-      raw_outp <- bind_rows(raw_outp, raw)
-    }
-  }
-  
-  rm(res_temp)
-  
+
+  raw_outp <- crossing(iso, shifts) %>%
+    mutate(
+      NH3 = NH3,
+      Na = Na,
+      Mn = Mn,
+      FA = FA,
+      shift = shift,
+      mono_mw = mono_mw,
+      exp_mass = mono_mw - shift
+    )
   write_csv(raw_outp, file = "shift_output.csv")
+  
+  # combo of all iso mono_mw and shifts
+  combos <- crossing(iso, shifts) %>%
+    mutate(
+      adducts = Mn + NH3 + Na + FA,
+      exp_mass = mono_mw - shift
+    )
+
+  matches <- combos %>%
+    rowwise() %>%
+    mutate(
+      match_row = list(
+        which(
+          ppm >= abs((data$neutral_mass - exp_mass) / exp_mass * 1e6)
+        )
+      )
+    ) %>%
+    filter(length(match_row) > 0) %>%
+    mutate(matched_mass = list(data$neutral_mass[match_row[[1]]])) %>%
+    unnest(c(match_row, matched_mass)) %>%
+    mutate (
+      ppm = abs((data$neutral_mass - exp_mass) / exp_mass * 1e6)
+    ) %>%
+    bind_cols(data[.$match_row, ]) %>%
+    ungroup()
+  
+  # delete high adductives
+  # Adduct (NH3+Na+Mn+FA) < S + HexA + charge – 2
+  matches <- filter(matches, adducts < S + HexA + charge - 2)
+  result <- matches
+  print(matches)
 
   #delete not matched peaks
   if(nrow(result) > 0) {
