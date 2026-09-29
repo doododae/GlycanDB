@@ -19,7 +19,7 @@ hepQuan <- function(scan, iso, ppm, db,
   
   # Filter db table based on DP range
   data <- filter(data, between(data$DP, dp_lwr, dp_upr))
-  
+
   # Step 1: TIC grouping
   scan_starting = scan$scan_num[1] - 1
   scan$scan_num <- scan$scan_num - scan_starting
@@ -27,7 +27,7 @@ hepQuan <- function(scan, iso, ppm, db,
   
   
   #peak smoothing, if scan num <100, skip TIC grouping step
-  if(nrow(scan) > 100){
+  if(nrow(scan) > 100) {
     peaks <- gaussianSmooth(scan$tic, window)
     peaks[which(is.na(peaks))] <- 0
     peaks <- as.numeric(peaks)
@@ -59,7 +59,7 @@ hepQuan <- function(scan, iso, ppm, db,
   #Step2 mass grouping
   
   #round monoMW
-  iso$round_mw <- round(iso$monoisotopic_mw, 2) 
+  iso$round_mw <- round(iso$monoisotopic_mw, 4) 
   
   #add each MW counts
   iso$mw_count <- 1
@@ -85,7 +85,6 @@ hepQuan <- function(scan, iso, ppm, db,
       mono_mw = mean(monoisotopic_mw),
       scan_range = max(scan_num)-min(scan_num) + 1,
       abundance = sum(abundance),
-      #score = sum(log((abundance+1)/(max(scan_num)-min(scan_num+1)))),
       scan_count = sum(mw_count),
       time = mean(time)
     )
@@ -93,122 +92,161 @@ hepQuan <- function(scan, iso, ppm, db,
   #delete peaks with scan number
   iso <- filter(iso, scan_range >= minscan)
   
+  print(paste("number of iso rows:", nrow(iso)))
+  
   result <- data.frame(stringsAsFactors = FALSE)
+  raw_outp <- data.frame(stringsAsFactors = FALSE)
   
   #returns shift combo matrix
-  shifts <- getShifts(na, nh, mn, fa)
+  shifts <- getShifts(na = na, nh = nh, mn = mn, fa = fa)
+  
+  print(paste("number of shift rows:", nrow(shifts)))
+  print(paste(shifts$combo, shifts$shift))
   
   for(i in c(1:nrow(iso))) {
     for(x in c(1:nrow(shifts))) {
-      res_temp <- quanSearch(iso$mono_mw[i], ppm, data, shifts$shift[x]) %>%
-        mutate(peak_no = iso$peak.No[i]) |>
-        mutate(charge = iso$charge[i]) |>
-        mutate(mz = iso$mz[i]) |>
-        mutate(mono_mw = iso$mono_mw[i] + shifts$shift[x]) |>
-        mutate(abundance = iso$abundance[i]) |>
-        mutate(scan_range = iso$scan_range[i]) |>
-        mutate(scan_count = iso$scan_count[i]) |>
-        mutate(time = iso$time[i]) |>
-        mutate(NH3 = shifts$NH3[x]) |>
-        mutate(Na = shifts$Na[x]) |>
-        mutate(Mn = shifts$Mn[x]) |>
-        mutate(FA = shifts$FA[x])
+      raw <- data.frame(stringsAsFactors = FALSE)
+      print(paste(i, x))
+      # + iso$charge[i] * 1.0078
+      exp_mass = iso$mono_mw[i] - shifts$shift[x]
+      raw <- raw %>%
+        mutate(
+          NH3 = shifts$NH3[x],
+          Na = shifts$Na[x],
+          Mn = shifts$Mn[x],
+          FA = shifts$FA[x],
+          shift = shifts$shift[x],
+          mono_mw = iso$mono_mw[i],
+          exp_mass = exp_mass
+        ) %>%
+        add_row(
+          NH3 = shifts$NH3[x],
+          Na = shifts$Na[x],
+          Mn = shifts$Mn[x],
+          FA = shifts$FA[x],
+          shift = round(shifts$shift[x], 5),
+          mono_mw = round(iso$mono_mw[i], 5),
+          exp_mass = round(exp_mass, 5)
+        )
+      res_temp <- quanSearch(exp_mass, ppm, data, shifts$shift[x]) %>%
+        mutate(
+          peak_no = iso$peak.No[i], 
+          charge = iso$charge[i], 
+          mz = iso$mz[i],
+          mono_mw = iso$mono_mw[i],
+          exp_mass = exp_mass,
+          abundance = iso$abundance[i],
+          scan_range = iso$scan_range[i],
+          scan_count = iso$scan_count[i],
+          time = iso$time[i],
+          NH3 = shifts$NH3[x],
+          Na = shifts$Na[x],
+          Mn = shifts$Mn[x],
+          FA = shifts$FA[x]
+        )
+      # delete high adductive
+      # Adduct (NH3+Na+Mn+FA) < S + HexA + charge – 2
+      adducts = res_temp$Mn + res_temp$NH3 + res_temp$Na + res_temp$FA
+      res_temp <- filter(res_temp, adducts < res_temp$S + res_temp$HexA + res_temp$charge - 2)
+      result <- bind_rows(result, res_temp)
+      raw_outp <- bind_rows(raw_outp, raw)
     }
-    #delete high adductive
-    #Adduct (NH3+Na+Mn+FA) < S + HexA + charge – 2
-    #res_temp <- filter(res_temp, res_temp$Mn + res_temp$NH3 + res_temp$Na + res_temp$FA < res_temp$S + res_temp$HexA + res_temp$charge - 2)
-    result <- bind_rows(result, res_temp)
   }
   
   rm(res_temp)
   
+  write_csv(raw_outp, file = "shift_output.csv")
+
   #delete not matched peaks
-  result <- filter(result, result$neutral_mass != 0) 
-  
-  #result <- result[,c("neutral_mass","Structure","Adduct","dp","ppm","peak.No","charge","mz","mono_mw","scan_range","abundance","scan_count","time")]
-  
-  result$gaussian <- 0.5
-  
-  
-  #calculate Gaussian similarity
-  length <- length(result$neutral_mass)
-  
-  for (i in c(1:length)){
-    data <- filter(iso_raw, round_mw == round(result$mono_mw[i], 2))
+  if(nrow(result) > 0) {
+    result <- filter(result, result$neutral_mass != 0) 
     
-    if(nrow(data) > 2){
-      td <- data$time
-      d <- data$abundance
-      mu <- data$time[data$abundance == max(data$abundance)]
-      num_peak_pts <- length(data$abundance)
+    result$gaussian <- 0.5
+    
+    #calculate Gaussian similarity
+    length <- length(result$neutral_mass)
+    
+    for (i in c(1:length)) {
+      data <- filter(iso_raw, round_mw == round(result$mono_mw[i], 2))
       
-      sigma <- max(data$time) - min(data$time)
-      h <- max(data$abundance)
-      
-      fit <- try(nls(d ~ SSgauss(td, mu, sigma, h)), silent = TRUE)
-      
-      if(class(fit) != "try-error") {
-        gaussPts <- as.matrix(fitted(fit))
-        gaussPts_std <- (gaussPts-mean(gaussPts)) / sd(gaussPts)
-        gaussPts_scale <- gaussPts_std / norm(gaussPts_std, type="F")
+      if(nrow(data) > 2) {
+        td <- data$time
+        d <- data$abundance
+        mu <- data$time[data$abundance == max(data$abundance)]
+        num_peak_pts <- length(data$abundance)
         
-        d <- as.matrix(d)
-        peak_intensity_std <- (d-mean(d)) / sd(d)
-        peak_intensity_scale <- peak_intensity_std / norm(peak_intensity_std, type="F")
+        sigma <- max(data$time) - min(data$time)
+        h <- max(data$abundance)
         
-        gauss_similarity <- sum(gaussPts_scale * peak_intensity_scale)
-        #result$gaussian[i] <- gauss_similarity
+        fit <- try(nls(d ~ SSgauss(td, mu, sigma, h)), silent = TRUE)
         
+        if(class(fit) != "try-error") {
+          gaussPts <- as.matrix(fitted(fit))
+          gaussPts_std <- (gaussPts-mean(gaussPts)) / sd(gaussPts)
+          gaussPts_scale <- gaussPts_std / norm(gaussPts_std, type="F")
+          
+          d <- as.matrix(d)
+          peak_intensity_std <- (d-mean(d)) / sd(d)
+          peak_intensity_scale <- peak_intensity_std / norm(peak_intensity_std, type="F")
+          
+          gauss_similarity <- sum(gaussPts_scale * peak_intensity_scale)
+          #result$gaussian[i] <- gauss_similarity
+          
+        }
+        else {
+          gauss_similarity <- 0.5
+        }
       }
       else {
         gauss_similarity <- 0.5
       }
+      
+      result$gaussian[i] <- gauss_similarity
+    }
+    
+    if(nrow(result) != 0) {
+      result <- result %>%
+        group_by(name, charge, NH3, Na, Mn, FA) %>%
+        summarise(
+          neutral_mass = mean(neutral_mass),
+          mono_mw = round(mean(mono_mw), 4),
+          exp_mass = round(mean(exp_mass), 4),
+          #Adductive = mean(Adductive),
+          DP = mean(DP),
+          mz = round(mean(mz), 4),
+          abundance = sum(abundance),
+          time = median(time),
+          ppm = round(mean(ppm), 2),
+          gaussian = max(gaussian),
+          scan_count=sum(scan_count),
+          scan_range=sum(scan_range)
+        )
+      
+      if(nrow(result) > 30) {
+        result <- filter(result, scan_range >= minscan)
+        result$log_ms <- log2(result$neutral_mass)
+        model <-  lm(log_ms~time, data = result)
+        pred.int <- predict(model, interval = "prediction")
+        result <- cbind(result, pred.int)
+        
+        #result <- filter(result, log_ms > lwr & log_ms < upr | DP < 4)
+      }
+      result$Exep.isotopic.mz <- round((result$mono_mw - 1.0078 * result$charge) / result$charge, 4)
     }
     else {
-      gauss_similarity <- 0.5
+      result <- filter(result, scan_range >= minscan & scan_count >= 1)
     }
     
-    result$gaussian[i] <- gauss_similarity
-  }
-  
-  if(nrow(result) != 0) {
-    #Column names (name, HexA, HexN, Ac, S, formula, neutral_mass, floating_Na, floating_NH3)
-    result <- result %>%
-      group_by(name, charge, NH3, Na, Mn, FA) %>%
-      summarise(
-        neutral_mass = mean(neutral_mass),
-        #Adductive = mean(Adductive),
-        DP = mean(DP),
-        mz = round(mean(mz), 4),
-        mono_mw = round(mean(mono_mw), 4),
-        abundance = sum(abundance),
-        time = median(time),
-        ppm = round(mean(ppm), 2),
-        gaussian = max(gaussian),
-        scan_count=sum(scan_count),
-        scan_range=sum(scan_range)
-      )
+    #calculate score
+    result$score <- round(result$gaussian * log10(result$abundance), 2)
+    result$time <- round(result$time, 2)
     
-    if(nrow(result) > 30) {
-      result <- filter(result, scan_range >= minscan)
-      result$log_ms <- log2(result$neutral_mass)
-      model <-  lm(log_ms~time, data = result)
-      pred.int <- predict(model, interval = "prediction")
-      result <- cbind(result, pred.int)
-      
-      #result <- filter(result, log_ms > lwr & log_ms < upr | DP < 4)
-    }
-    result$Exep.isotopic.mz <- round((result$mono_mw - 1.0078 * result$charge) / result$charge, 4)
+    outp_db <- result
   }
   else {
-    result <- filter(result, scan_range >= minscan & scan_count >= 1)
+    print("no results")
+    outp_db <- result
   }
-  
-  #calculate score
-  result$score <- round(result$gaussian * log10(result$abundance), 2)
-  result$time <- round(result$time, 2)
-
-  outp_db <- result
   
   return(outp_db)
 }

@@ -19,13 +19,15 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa) {
           peak_mass = round(exp_mass - (i-1) * 1.00335, 5)
           
           data <- filter(db, ppm >= abs((neutral_mass - peak_mass) / peak_mass * 10^6)) |>
-                  mutate("Exp Mass" = peak_mass + shifts$shift[x]) |>
-                  mutate("Iso Peak" = i) |>
-                  mutate("Na" = shifts$Na[x]) |>
-                  mutate("NH3" = shifts$NH3[x]) |>
-                  mutate("Mn" = shifts$Mn[x]) |>
-                  mutate("FA" = shifts$FA[x]) |>
-                  mutate(ppm = abs(round(((neutral_mass - peak_mass + shifts$shift[x]) / (peak_mass + shifts$shift[x]) * 10^6), 2)))
+                  mutate(
+                    "Exp Mass" = peak_mass + shifts$shift[x],
+                    "Iso Peak" = i,
+                    "Na" = shifts$Na[x],
+                    "NH3" = shifts$NH3[x],
+                    "Mn" = shifts$Mn[x],
+                    "FA" = shifts$FA[x],
+                    ppm = abs(round(((neutral_mass - peak_mass + shifts$shift[x]) / (peak_mass + shifts$shift[x]) * 10^6), 2))
+                  )
           
           if(count(data) > 0) {
             result <- bind_rows(result, data)
@@ -39,12 +41,14 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa) {
       }
       else {
         data <- filter(db, ppm >= abs((neutral_mass - exp_mass) / exp_mass * 10^6)) |>
-                    mutate(exp_mass = exp_mass + shifts$shift[x]) |>
-                    mutate("Na" = shifts$Na[x]) |>
-                    mutate("NH3" = shifts$NH3[x]) |>
-                    mutate("Mn" = shifts$Mn[x]) |>
-                    mutate("FA" = shifts$FA[x]) |>
-                    mutate(ppm = abs(round(((neutral_mass - exp_mass + shifts$shift[x]) / (exp_mass + shifts$shift[x]) * 10^6), 2)))
+                    mutate(
+                      exp_mass = exp_mass + shifts$shift[x], 
+                      "Na" = shifts$Na[x],
+                      "NH3" = shifts$NH3[x],
+                      "Mn" = shifts$Mn[x],
+                      "FA" = shifts$FA[x],
+                      ppm = abs(round(((neutral_mass - exp_mass + shifts$shift[x]) / (exp_mass + shifts$shift[x]) * 10^6), 2))
+                    ) 
         if(count(data) > 0) {
           result <- bind_rows(result, data)
           out_db <- result

@@ -235,10 +235,11 @@ server <- function(input, output, session) {
         detail = 'This may take a while...', 
         value = 0, {
           for (i in 1:10) {
-            qual_outp <- qualSearch(input$mz, input$charge, 
-                                    input$ppm, input$iso_peak, input$db, 
-                                    input$qual_Na, input$qual_NH3, input$qual_Mn, input$qual_FA
-                                    )
+            qual_outp <- qualSearch(
+                input$mz, input$charge, 
+                input$ppm, input$iso_peak, input$db, 
+                input$qual_Na, input$qual_NH3, input$qual_Mn, input$qual_FA
+              )
             return(qual_outp)
             incProgress(1/15)
             Sys.sleep(0.25)
