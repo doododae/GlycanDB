@@ -13,7 +13,7 @@ hepQuan <- function(scan, iso, ppm, db,
                     na, nh, mn, fa, 
                     window = 100, nups = 3, ndowns = 3, threshold = 2, ticfilter = .95) {
   
-  db_path = "db/test_backbone_database.tsv"
+  db_path = db
   
   data = read.table(file = db_path , sep = '\t', header = TRUE)
   
@@ -98,6 +98,8 @@ hepQuan <- function(scan, iso, ppm, db,
   shifts <- getShifts(na = na, nh = nh, mn = mn, fa = fa)
   
   print(paste("number of shift rows:", nrow(shifts)))
+  
+  print(ppm)
 
   raw_outp <- crossing(iso, shifts) %>%
     mutate(
@@ -123,7 +125,7 @@ hepQuan <- function(scan, iso, ppm, db,
     mutate(
       match_row = list(
         which(
-          ppm >= abs((data$neutral_mass - exp_mass) / exp_mass * 1e6)
+          ppm >= abs(data$neutral_mass - exp_mass) / exp_mass * 1e6
         )
       )
     ) %>%
@@ -131,7 +133,7 @@ hepQuan <- function(scan, iso, ppm, db,
     mutate(matched_mass = list(data$neutral_mass[match_row[[1]]])) %>%
     unnest(c(match_row, matched_mass)) %>%
     mutate (
-      ppm = abs((data$neutral_mass - exp_mass) / exp_mass * 1e6)
+      ppm = abs(data$neutral_mass[match_row] - exp_mass) / exp_mass * 1e6
     ) %>%
     bind_cols(data[.$match_row, ]) %>%
     ungroup()
