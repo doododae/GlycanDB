@@ -11,7 +11,8 @@ hepQuan <- function(scan, iso, ppm, db,
                     minscan, start, end, 
                     dp_lwr, dp_upr, 
                     na, nh, mn, fa, 
-                    window = 100, nups = 3, ndowns = 3, threshold = 2, ticfilter = .95) {
+                    window = 100, nups = 3, ndowns = 3, threshold = 2, ticfilter = .95,
+                    reducing_end, non_end, show_normal) {
   
   db_path = db
   
@@ -19,6 +20,33 @@ hepQuan <- function(scan, iso, ppm, db,
   
   # Filter db table based on DP range
   data <- filter(data, between(data$DP, dp_lwr, dp_upr))
+  
+  og_data <- data
+  #add any reducing/non-reducing ends to the backbone database
+  chem_mod <- data.frame(
+    name = c("pNP", "DUA"),
+    mass = c(121.0164, -18.0106),
+    formula = c("C6H3NO2", "H2O")
+  )
+  
+  reducing_end <- if (is.null(reducing_end)) 0 else reducing_end
+  non_end <- if (is.null(non_end)) 0 else non_end
+  show_normal <- if(is.null(show_normal)) 0 else show_normal
+  
+  if(reducing_end == 'pnp') {
+    data$name <- paste0(data$name, "_pNP")
+    tag_mass <- chem_mod %>% filter(name == "pNP") %>% pull(mass)
+    data$neutral_mass <- data$neutral_mass + tag_mass
+  }
+  
+  if(non_end == 'dua') {
+    data$name <- sub("HS_", "ΔUA_", data$name, fixed = TRUE)
+    tag_mass <- chem_mod %>% filter(name == "DUA") %>% pull(mass)
+    data$neutral_mass <- data$neutral_mass + tag_mass
+  }
+  
+  #bind backbone data if requested
+  data <- if(show_normal == "show") rbind(data, og_data) else data
 
   # Step 1: TIC grouping
   scan_starting = scan$scan_num[1] - 1
@@ -54,7 +82,7 @@ hepQuan <- function(scan, iso, ppm, db,
   }
   
   #delete scan numbers which are not in peak group
-  iso<- iso[which(iso$peak.No!=0),]
+  #iso<- iso[which(iso$peak.No!=0),]
   
   #Step2 mass grouping
   
@@ -117,6 +145,9 @@ hepQuan <- function(scan, iso, ppm, db,
       adducts = Mn + NH3 + Na + FA,
       exp_mass = mono_mw - shift
     )
+  
+  data_idx <- data %>%
+    mutate(match_row = row_number())
 
   matches <- combos %>%
     rowwise() %>%
@@ -127,23 +158,21 @@ hepQuan <- function(scan, iso, ppm, db,
         )
       )
     ) %>%
-    filter(length(match_row) > 0) %>%
-    mutate(matched_mass = list(data$neutral_mass[match_row[[1]]])) %>%
-    unnest(c(match_row, matched_mass)) %>%
-    mutate (
-      ppm = abs(data$neutral_mass[match_row] - exp_mass) / exp_mass * 1e6
-    ) %>%
-    bind_cols(data[.$match_row, ]) %>%
-    ungroup()
+    ungroup() %>%                          # ungroup here, once
+    filter(lengths(match_row) > 0) %>%     # now counts matches per row correctly
+    unnest(match_row) %>%                  # one row per match
+    inner_join(data_idx, by = "match_row") %>%
+    mutate(ppm_error = abs(neutral_mass - exp_mass) / exp_mass * 1e6)
   
-  # delete high adductives
-  # Adducts (NH3+Na+Mn+FA) < S + HexA + charge – 2
-  matches <- filter(matches, adducts < S + HexA + charge - 2)
-  result <- matches
+  print(matches)
   
   #delete not matched peaks
-  if(nrow(result) > 0) {
-    result <- filter(result, result$neutral_mass != 0) 
+  if(nrow(matches) > 0) {
+    # delete high adductives
+    # Adducts (NH3+Na+Mn+FA) < S + HexA + charge – 2
+    result <- matches %>%
+              filter(adducts < S + HexA + charge - 2) %>%
+              filter(neutral_mass != 0) 
     
     result$gaussian <- 0.5
     
@@ -229,6 +258,7 @@ hepQuan <- function(scan, iso, ppm, db,
   }
   else {
     print("no results")
+    result <- matches
     outp_db <- result
   }
   

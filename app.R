@@ -23,6 +23,7 @@ source('qualSearch.R')
 source('quanSummary.R')
 source('quanDetails.R')
 source('shiftGen.R')
+source('formatDatabase.R')
 
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
@@ -64,10 +65,19 @@ ui <- dashboardPage(
               selectizeInput(
                  "db", "Select DB:",
                  choices = c(
-                   "4-30 mer db" = "db/hs_pnp_4_30mer_backbone.tsv",
-                   "test db" = "db/test_backbone_database.tsv"
+                   "4-30 mer db" = "db/hs_4_30mer_backbone.tsv"
                  ),
                  multiple = FALSE
+              ),
+              checkboxGroupInput("qual_reducing_end", "Reducing End:",
+                c(
+                  "pNP" = "pnp"
+                )
+              ),
+              checkboxGroupInput("qual_non_end", "Non-Reducing End:",
+                c(
+                  "ΔUA" = "dua"
+                )
               ),
               numericInput( 
                 "mz", 
@@ -137,10 +147,24 @@ ui <- dashboardPage(
               ),
               selectizeInput("db", "Select DB:",
                 choices = c(
-                            "4-30 mer db" = "db/hs_pnp_4_30mer_backbone.tsv",
-                            "test db" = "db/test_backbone_database.tsv"
+                            "4-30 mer db" = "db/hs_4_30mer_backbone.tsv"
                           ),
                 multiple = FALSE
+              ),
+              checkboxGroupInput("quan_reducing_end", "Reducing End:",
+               c(
+                 "pNP" = "pnp"
+               )
+              ),
+              checkboxGroupInput("quan_non_end", "Non-Reducing End:",
+               c(
+                 "ΔUA" = "dua"
+               )
+              ),
+              checkboxGroupInput("quan_show_normal", "Normal:",
+               c(
+                 "Show" = "show"
+               )
               ),
               h4('Adducts'),
               checkboxInput("show_na", "Show Na", value = FALSE),
@@ -163,12 +187,11 @@ ui <- dashboardPage(
                 condition = "input.show_fa == true",
                 numericInput("quan_FA", "FA", min = 0, max = 10, value = 0)
               ),
-              h4('PPM'),
-              numericInput("quan_ppm", "PPM",min = 0, max = 100, value = 15),
+              numericInput("quan_ppm", "PPM", min = 0, max = 100, value = 15),
               h4('DP Range'),
               splitLayout(
-                numericInput("dp_lwr", "Start",min = 0, max = 1000, value = 4),
-                numericInput("dp_upr", "End",min = 0, max = 1000, value = 30)
+                numericInput("dp_lwr", "Start", min = 0, max = 1000, value = 4),
+                numericInput("dp_upr", "End", min = 0, max = 1000, value = 30)
               ),
               h4('Elution Time (Min)'),
               splitLayout(
@@ -220,7 +243,8 @@ server <- function(input, output, session) {
               input$minscan, input$start, input$end, 
               input$dp_lwr, input$dp_upr,
               input$quan_Na, input$quan_NH3, input$quan_Mn, input$quan_FA,
-              input$window, input$nups, input$ndowns, input$threshold, input$ticfilter
+              input$window, input$nups, input$ndowns, input$threshold, input$ticfilter,
+              input$quan_reducing_end, input$quan_non_end, input$quan_show_normal
             )
             return(quan_outp)
             incProgress(1/15)
@@ -240,7 +264,8 @@ server <- function(input, output, session) {
             qual_outp <- qualSearch(
                 input$mz, input$charge, 
                 input$ppm, input$iso_peak, input$db, 
-                input$qual_Na, input$qual_NH3, input$qual_Mn, input$qual_FA
+                input$qual_Na, input$qual_NH3, input$qual_Mn, input$qual_FA,
+                input$qual_reducing_end, input$qual_non_end
               )
             return(qual_outp)
             incProgress(1/15)

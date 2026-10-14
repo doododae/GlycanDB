@@ -1,8 +1,33 @@
-qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa) {
+qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa, reducing_end, non_end) {
 
   db_path = path
   
   db = read.table(file = db_path , sep = '\t', header = TRUE)
+  
+  chem_mod <- data.frame(
+    name = c("pNP", "DUA"),
+    mass = c(121.0164, -18.0106),
+    formula = c("C6H3NO2", "H2O")
+  )
+  
+  reducing_end <- if (is.null(reducing_end)) 0 else reducing_end
+  
+  non_end <- if (is.null(non_end)) 0 else non_end
+  
+  if(reducing_end == "pnp") {
+    mod_formula <- chem_mod %>% filter(name == "pNP") %>% pull(formula)
+    tag_mass <- chem_mod %>% filter(name == "pNP") %>% pull(mass)
+    db$name <- paste0(db$name, "_pNP")
+    db$formula <- mapply(add_formulas, db$formula, mod_formula)
+    db$neutral_mass <- db$neutral_mass + tag_mass
+  }
+  if(non_end == "dua") {
+    mod_formula <- chem_mod %>% filter(name == "DUA") %>% pull(formula)
+    tag_mass <- chem_mod %>% filter(name == "DUA") %>% pull(mass)
+    db$name <- sub("HS_", "ΔUA_", db$name, fixed = TRUE)
+    db$formula <- mapply(sub_formulas, db$formula, mod_formula)
+    db$neutral_mass <- db$neutral_mass + tag_mass
+  }
   
   outp_db <- db
   
