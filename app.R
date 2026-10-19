@@ -236,23 +236,22 @@ server <- function(input, output, session) {
         message = 'Calculating',
         detail = 'This may take a while...', 
         value = 0, {
-          for (i in 1:10) {
-            req(input$scan)
-            scan <-read.csv(input$scan$datapath, header = TRUE)
-            req(input$iso)
-            iso <- read.csv(input$iso$datapath, header = TRUE)
-            quan_outp <- hepQuan(
-              scan, iso, input$quan_ppm, input$db, 
-              input$minscan, input$start, input$end, 
-              input$dp_lwr, input$dp_upr,
-              input$quan_Na, input$quan_NH3, input$quan_Mn, input$quan_FA,
-              input$window, input$nups, input$ndowns, input$threshold, input$ticfilter,
-              input$quan_reducing_end, input$quan_non_end, input$quan_show_normal
-            )
-            return(quan_outp)
+          for (i in 1:15) {
             incProgress(1/15)
             Sys.sleep(0.25)
           }
+          req(input$scan)
+          scan <-read.csv(input$scan$datapath, header = TRUE)
+          req(input$iso)
+          iso <- read.csv(input$iso$datapath, header = TRUE)
+          quan_outp <- hepQuan(
+            scan, iso, input$quan_ppm, input$db, 
+            input$minscan, input$start, input$end, 
+            input$dp_lwr, input$dp_upr,
+            input$quan_Na, input$quan_NH3, input$quan_Mn, input$quan_FA,
+            input$window, input$nups, input$ndowns, input$threshold, input$ticfilter,
+            input$quan_reducing_end, input$quan_non_end, input$quan_show_normal
+          )
         }
       )
     })
@@ -263,17 +262,16 @@ server <- function(input, output, session) {
         message = 'Calculating',
         detail = 'This may take a while...', 
         value = 0, {
-          for (i in 1:10) {
-            qual_outp <- qualSearch(
-                input$mz, input$charge, 
-                input$ppm, input$iso_peak, input$db, 
-                input$qual_Na, input$qual_NH3, input$qual_Mn, input$qual_FA,
-                input$qual_reducing_end, input$qual_non_end
-              )
-            return(qual_outp)
+          for (i in 1:15) {
             incProgress(1/15)
             Sys.sleep(0.25)
           }
+          qual_outp <- qualSearch(
+            input$mz, input$charge, 
+            input$ppm, input$iso_peak, input$db, 
+            input$qual_Na, input$qual_NH3, input$qual_Mn, input$qual_FA,
+            input$qual_reducing_end, input$qual_non_end
+          )
         }
       )
     })
