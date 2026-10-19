@@ -15,6 +15,7 @@ library(dplyr)
 library(tidyr)
 library(reactable)
 library(pracma)
+library(jsonlite)
 
 options(shiny.maxRequestSize = 300*1024^2)
 
@@ -137,6 +138,7 @@ ui <- dashboardPage(
       tabItem(tabName ="HepQuan",
         fluidRow(
           box(title=strong("HepQuan"),status = "info", width = 3,
+              fileInput("importConfig", "Import config", accept = ".json"),
               fileInput("scan", "Upload scan.csv",
                 multiple = FALSE,
                 accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv")
@@ -201,15 +203,16 @@ ui <- dashboardPage(
               splitLayout(
                 numericInput("minscan", "Min Scan Number", min = 0, max = 200, value = 15)
               ),
-              checkboxInput("show_input", "Advanced Settings", value = FALSE),
+              checkboxInput("show_adv", "Advanced Settings", value = FALSE),
               conditionalPanel(
-                condition = "input.show_input == true",
+                condition = "input.show_adv == true",
                 numericInput("window", "Gaussian Smoothing Window", min = 0, max = 10000, value = 100),
                 numericInput("nups", "findpeaks nups", min = 0, max = 100, value = 3),
                 numericInput("ndowns", "findpeaks ndowns", min = 0, max = 100, value = 3),
                 numericInput("threshold", "findpeaks threshold", min = 0, max = 100, value = 2),
                 numericInput("ticfilter", "TIC grouping filter", min = 0, max = 1, step = 0.01, value = 0.95)
               ),
+              downloadButton("exportConfig", "Export config"),
               actionButton("quan_search", "Search")
           ),
           box(title=strong("Result:"),width = 9,
@@ -354,6 +357,49 @@ server <- function(input, output, session) {
       },
       contentType = 'text/csv'
     )
+    
+    cfg_num  <- c("quan_ppm", "dp_lwr", "dp_upr", "start", "end", "minscan",
+                  "quan_Na", "quan_NH3", "quan_Mn", "quan_FA",
+                  "window", "nups", "ndowns", "threshold", "ticfilter")
+    cfg_text <- c("quan_reducing_end", "quan_non_end", "quan_show_normal")
+    
+    output$exportConfig <- downloadHandler(
+      filename = function() paste0("hepquan_config_", Sys.Date(), ".json"),
+      content = function(file) {
+        ids <- c(cfg_num, cfg_text)
+        cfg <- setNames(lapply(ids, function(id) input[[id]]), ids)
+        cfg$version <- 1
+        write_json(cfg, file, auto_unbox = TRUE, pretty = TRUE, null = "null")
+      }
+    )
+    
+    observeEvent(input$importConfig, {
+      cfg <- tryCatch(read_json(input$importConfig$datapath, simplifyVector = TRUE),
+                      error = function(e) NULL)
+      if (is.null(cfg)) {
+        showNotification("Could not read config file", type = "error")
+        return()
+      }
+      
+      for (id in intersect(names(cfg), cfg_num))
+        if (is.numeric(cfg[[id]])) updateNumericInput(session, id, value = cfg[[id]])
+      for (id in intersect(names(cfg), cfg_text))
+        updateCheckboxGroupInput(session, id, selected = cfg[[id]])
+      
+      # Reveal the conditional adduct panels that now hold non-zero values
+      updateCheckboxInput(session, "show_na", value = isTRUE(cfg$quan_Na > 0))
+      updateCheckboxInput(session, "show_nh", value = isTRUE(cfg$quan_NH3 > 0))
+      updateCheckboxInput(session, "show_mn", value = isTRUE(cfg$quan_Mn > 0))
+      updateCheckboxInput(session, "show_fa", value = isTRUE(cfg$quan_FA > 0))
+      updateCheckboxInput(session, "show_adv", value = isTRUE(cfg$window != 100 || 
+                                                              cfg$nups != 3 ||
+                                                              cfg$ndowns != 3 ||
+                                                              cfg$threshold != 2 ||
+                                                              cfg$ticfilter != .95))
+      
+      showNotification("Filters loaded", type = "message")
+    })
+    
 }
 
 # Run the application 
