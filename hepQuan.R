@@ -12,7 +12,7 @@ hepQuan <- function(scan, iso, ppm, db,
                     dp_lwr, dp_upr, 
                     na, nh, mn, fa, 
                     window = 100, nups = 3, ndowns = 3, threshold = 2, ticfilter = .95,
-                    reducing_end, non_end, show_normal) {
+                    reducing_end, non_end) {
   
   db_path = db
   
@@ -21,32 +21,11 @@ hepQuan <- function(scan, iso, ppm, db,
   # Filter db table based on DP range
   data <- filter(data, between(data$DP, dp_lwr, dp_upr))
   
-  og_data <- data
-  #add any reducing/non-reducing ends to the backbone database
-  chem_mod <- data.frame(
-    name = c("pNP", "DUA"),
-    mass = c(121.0164, -18.0106),
-    formula = c("C6H3NO2", "H2O")
-  )
-  
   reducing_end <- if (is.null(reducing_end)) 0 else reducing_end
+  
   non_end <- if (is.null(non_end)) 0 else non_end
-  show_normal <- if(is.null(show_normal)) 0 else show_normal
   
-  if(reducing_end == 'pnp') {
-    data$name <- paste0(data$name, "_pNP")
-    tag_mass <- chem_mod %>% filter(name == "pNP") %>% pull(mass)
-    data$neutral_mass <- data$neutral_mass + tag_mass
-  }
-  
-  if(non_end == 'dua') {
-    data$name <- sub("HS_", "ΔUA_", data$name, fixed = TRUE)
-    tag_mass <- chem_mod %>% filter(name == "DUA") %>% pull(mass)
-    data$neutral_mass <- data$neutral_mass + tag_mass
-  }
-  
-  #bind backbone data if requested
-  data <- if(show_normal == "show") rbind(data, og_data) else data
+  data <- format_db(data, reducing_end, non_end)
 
   # Step 1: TIC grouping
   scan_starting = scan$scan_num[1] - 1
@@ -162,7 +141,7 @@ hepQuan <- function(scan, iso, ppm, db,
     filter(lengths(match_row) > 0) %>%     # now counts matches per row correctly
     unnest(match_row) %>%                  # one row per match
     inner_join(data_idx, by = "match_row") %>%
-    mutate(ppm_error = abs(neutral_mass - exp_mass) / exp_mass * 1e6)
+    mutate(ppm = abs(neutral_mass - exp_mass) / exp_mass * 1e6)
   
   print(matches)
   
@@ -224,7 +203,6 @@ hepQuan <- function(scan, iso, ppm, db,
           neutral_mass = round(mean(neutral_mass), 4),
           mono_mw = round(mean(mono_mw), 4),
           exp_mass = round(mean(exp_mass), 4),
-          #Adductive = mean(Adductive),
           DP = mean(DP),
           mz = round(mean(mz), 4),
           abundance = sum(abundance),

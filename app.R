@@ -72,11 +72,14 @@ ui <- dashboardPage(
               ),
               checkboxGroupInput("qual_reducing_end", "Reducing End:",
                 c(
-                  "pNP" = "pnp"
+                  "Normal" = "normal",
+                  "pNP" = "pnp",
+                  "1,6-Anhydro" = "1-6-anhydro"
                 )
               ),
               checkboxGroupInput("qual_non_end", "Non-Reducing End:",
                 c(
+                  "Normal" = "normal",
                   "ΔUA" = "dua"
                 )
               ),
@@ -155,17 +158,15 @@ ui <- dashboardPage(
               ),
               checkboxGroupInput("quan_reducing_end", "Reducing End:",
                c(
-                 "pNP" = "pnp"
+                 "Normal" = "normal",
+                 "pNP" = "pnp",
+                 "1,6-Anhydro" = "1-6-anhydro"
                )
               ),
               checkboxGroupInput("quan_non_end", "Non-Reducing End:",
                c(
+                 "Normal" = "normal",
                  "ΔUA" = "dua"
-               )
-              ),
-              checkboxGroupInput("quan_show_normal", "Normal:",
-               c(
-                 "Show" = "show"
                )
               ),
               h4('Adducts'),
@@ -250,7 +251,7 @@ server <- function(input, output, session) {
             input$dp_lwr, input$dp_upr,
             input$quan_Na, input$quan_NH3, input$quan_Mn, input$quan_FA,
             input$window, input$nups, input$ndowns, input$threshold, input$ticfilter,
-            input$quan_reducing_end, input$quan_non_end, input$quan_show_normal
+            input$quan_reducing_end, input$quan_non_end
           )
         }
       )
@@ -359,7 +360,7 @@ server <- function(input, output, session) {
     cfg_num  <- c("quan_ppm", "dp_lwr", "dp_upr", "start", "end", "minscan",
                   "quan_Na", "quan_NH3", "quan_Mn", "quan_FA",
                   "window", "nups", "ndowns", "threshold", "ticfilter")
-    cfg_text <- c("quan_reducing_end", "quan_non_end", "quan_show_normal")
+    cfg_text <- c("quan_reducing_end", "quan_non_end")
     
     output$exportConfig <- downloadHandler(
       filename = function() paste0("hepquan_config_", Sys.Date(), ".json"),
