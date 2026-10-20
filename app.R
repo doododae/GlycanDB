@@ -257,7 +257,7 @@ server <- function(input, output, session) {
       )
     })
     
-    #Qualitative search reactive - only updates on qual_search event activation
+    #### QUAL SEARCH EVENT FUNCTION ####
     qual_search <- eventReactive(input$qual_search, {
       withProgress(                
         message = 'Calculating',
@@ -311,6 +311,76 @@ server <- function(input, output, session) {
         )
       }))
     })
+    
+    
+    #### QUAL REDUCING END CHECKBOX CONTROL ####
+    prev_qual_end <- reactiveVal(NULL)
+    
+    observeEvent(input$qual_reducing_end, {
+      current <- input$qual_reducing_end
+      previous <- prev_qual_end()
+      
+      if ("pnp" %in% current && !("pnp" %in% previous)) {
+        if("normal" %in% current) current <- c("normal", "pnp") else current <- "pnp"
+      } else if("1-6-anhydro" %in% current && !("1-6-anhydro" %in% previous)) {
+        if("normal" %in% current) current <- c("normal", "1-6-anhydro") else current <- "1-6-anhydro"
+      }
+      updateCheckboxGroupInput(session, "qual_reducing_end", selected = current)
+      prev_qual_end(current)
+    }, ignoreNULL = FALSE)
+    #### QUAL REDUCING END CHECKBOX CONTROL ####
+    
+    
+    #### QUAL NON-REDUCING END CHECKBOX CONTROL ####
+    prev_qual_non <- reactiveVal(NULL)
+    
+    observeEvent(input$qual_non_end, {
+      current <- input$qual_non_end
+      previous <- prev_qual_non()
+      
+      if ("dua" %in% current && !("dua" %in% previous)) {
+        if("normal" %in% current) current <- c("normal", "dua") else current <- "dua"
+      }
+      updateCheckboxGroupInput(session, "qual_non_end", selected = current)
+      prev_qual_non(current)
+    }, ignoreNULL = FALSE)
+    #### QUAL NON-REDUCING END CHECKBOX CONTROL ####
+    
+    
+    #### QUANT REDUCING END CHECKBOX CONTROL ####
+    prev_quan_end <- reactiveVal(NULL)
+    
+    observeEvent(input$quan_reducing_end, {
+      current <- input$quan_reducing_end
+      previous <- prev_quan_end()
+
+      if ("pnp" %in% current && !("pnp" %in% previous)) {
+        if("normal" %in% current) current <- c("normal", "pnp") else current <- "pnp"
+      } else if("1-6-anhydro" %in% current && !("1-6-anhydro" %in% previous)) {
+        if("normal" %in% current) current <- c("normal", "1-6-anhydro") else current <- "1-6-anhydro"
+      }
+      updateCheckboxGroupInput(session, "quan_reducing_end", selected = current)
+      prev_quan_end(current)
+    }, ignoreNULL = FALSE)
+    #### QUANT REDUCING END CHECKBOX CONTROL ####
+    
+    
+    #### QUANT NON-REDUCING END CHECKBOX CONTROL ####
+    prev_quan_non <- reactiveVal(NULL)
+    
+    observeEvent(input$quan_non_end, {
+      current <- input$quan_non_end
+      previous <- prev_quan_non()
+      
+      if ("dua" %in% current && !("dua" %in% previous)) {
+        if("normal" %in% current) current <- c("normal", "dua") else current <- "dua"
+      }
+      
+      updateCheckboxGroupInput(session, "quan_non_end", selected = current)
+      prev_quan_non(current)
+    }, ignoreNULL = FALSE)
+    #### QUANT NON-REDUCING END CHECKBOX CONTROL ####
+    
     
     observeEvent(input$row_click, {
       details <- getDetails(input$row_click$name, quan_search())
