@@ -237,10 +237,6 @@ server <- function(input, output, session) {
         message = 'Calculating',
         detail = 'This may take a while...', 
         value = 0, {
-          for (i in 1:15) {
-            incProgress(1/15)
-            Sys.sleep(0.25)
-          }
           req(input$scan)
           scan <-read.csv(input$scan$datapath, header = TRUE)
           req(input$iso)
@@ -263,10 +259,6 @@ server <- function(input, output, session) {
         message = 'Calculating',
         detail = 'This may take a while...', 
         value = 0, {
-          for (i in 1:15) {
-            incProgress(1/15)
-            Sys.sleep(0.25)
-          }
           qual_outp <- qualSearch(
             input$mz, input$charge, 
             input$ppm, input$iso_peak, input$db, 

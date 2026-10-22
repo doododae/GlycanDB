@@ -14,6 +14,8 @@ hepQuan <- function(scan, iso, ppm, db,
                     window = 100, nups = 3, ndowns = 3, threshold = 2, ticfilter = .95,
                     reducing_end, non_end) {
   
+  ### LOAD & PREPARE DB ###
+  incProgress(0.10, detail = "Prepping database...")
   db_path = db
   
   data = read.table(file = db_path , sep = '\t', header = TRUE)
@@ -26,8 +28,11 @@ hepQuan <- function(scan, iso, ppm, db,
   non_end <- if (is.null(non_end)) 0 else non_end
   
   data <- format_db(data, reducing_end, non_end)
-
+  ### END OF DB PREP ###
+  
+  
   # Step 1: TIC grouping
+  incProgress(0.05, detail = "TIC Grouping & Peak Smoothing...")
   scan_starting = scan$scan_num[1] - 1
   scan$scan_num <- scan$scan_num - scan_starting
   iso$scan_num <- iso$scan_num - scan_starting
@@ -64,7 +69,7 @@ hepQuan <- function(scan, iso, ppm, db,
   #iso<- iso[which(iso$peak.No!=0),]
   
   #Step2 mass grouping
-  
+  incProgress(0.05, detail = "Mass Grouping...")
   #round monoMW
   iso$round_mw <- round(iso$monoisotopic_mw, 2) 
   
@@ -102,6 +107,7 @@ hepQuan <- function(scan, iso, ppm, db,
   print(paste("number of iso rows:", nrow(iso)))
   
   #returns shift combo matrix
+  incProgress(0.10, detail = "Applying Adduct Shifts...")
   shifts <- getShifts(na = na, nh = nh, mn = mn, fa = fa)
   
   print(paste("number of shift rows:", nrow(shifts)))
@@ -127,7 +133,8 @@ hepQuan <- function(scan, iso, ppm, db,
   
   data_idx <- data %>%
     mutate(match_row = row_number())
-
+  
+  incProgress(0.3, detail = "Matching Masses...")
   matches <- combos %>%
     rowwise() %>%
     mutate(
@@ -143,10 +150,9 @@ hepQuan <- function(scan, iso, ppm, db,
     inner_join(data_idx, by = "match_row") %>%
     mutate(ppm = abs(neutral_mass - exp_mass) / exp_mass * 1e6)
   
-  print(matches)
-  
   #delete not matched peaks
   if(nrow(matches) > 0) {
+    incProgress(0.45, detail = "Finalizing...")
     # delete high adductives
     # Adducts (NH3+Na+Mn+FA) < S + HexA + charge – 2
     result <- matches %>%
@@ -235,10 +241,11 @@ hepQuan <- function(scan, iso, ppm, db,
     outp_db <- result
   }
   else {
-    print("no results")
+    print("No Results")
     result <- matches
     outp_db <- result
   }
   
+  incProgress(0.5, detail = "Complete!")
   return(outp_db)
 }

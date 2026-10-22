@@ -23,7 +23,8 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa, reducing
   if(!is.na(mz) && !is.na(charge) && !is.na(ppm)) {
     result <- data.frame(stringsAsFactors = FALSE) 
     for(x in c(1:nrow(shifts))) {
-      #experimental mass formula --- (mz * charge + charge * 1.0078) - shift
+      incProgress(1/nrow(shifts), detail = "Searching all possible shifts...")
+      ### experimental mass formula --- (mz * charge + charge * 1.0078) - shift ###
       exp_mass = round((mz * charge) + (charge * 1.0078), 5) - shifts$shift[x]
       
       if(iso_peak == 'no') {
