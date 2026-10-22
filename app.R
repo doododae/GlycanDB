@@ -170,15 +170,15 @@ ui <- dashboardPage(
                )
               ),
               h4('Adducts'),
-              checkboxInput("show_na", "Show Na", value = FALSE),
-              conditionalPanel(
-                condition = "input.show_na == true",
-                numericInput("quan_Na", "Na", min = 0, max = 10, value = 0)
-              ),
               checkboxInput("show_nh", "Show NH3", value = FALSE),
               conditionalPanel(
                 condition = "input.show_nh == true",
                 numericInput("quan_NH3", "NH3", min = 0, max = 10, value = 0)
+              ),
+              checkboxInput("show_na", "Show Na", value = FALSE),
+              conditionalPanel(
+                condition = "input.show_na == true",
+                numericInput("quan_Na", "Na", min = 0, max = 10, value = 0)
               ),
               checkboxInput("show_mn", "Show Mn", value = FALSE),
               conditionalPanel(

@@ -150,14 +150,31 @@ hepQuan <- function(scan, iso, ppm, db,
     inner_join(data_idx, by = "match_row") %>%
     mutate(ppm = abs(neutral_mass - exp_mass) / exp_mass * 1e6)
   
+  adduct_cols <- c("NH3", "Na", "Mn", "FA")
+  
+  # TRUE if the distinct values are exactly 0, 1, 2, ... max (with max > 0)
+  is_seq <- function(x) {
+    u <- sort(unique(x))
+    max(u) > 0 && u[1] == 0 && all(diff(u) == 1)
+  }
+  
+  matches <- matches %>%
+    group_by(name) %>%
+    filter(any(sapply(across(all_of(adduct_cols)), is_seq))) %>%
+    ungroup()
+  
+  # delete high adductives
+  # Adducts (NH3+Na+Mn+FA) < S + HexA + charge – 2
+  result <- matches %>%
+    filter(adducts < S + HexA + charge - 2) %>%
+    filter(neutral_mass != 0) 
+  
+  print(result)
+  
   #delete not matched peaks
-  if(nrow(matches) > 0) {
+  if(nrow(result) > 0) {
+
     incProgress(0.45, detail = "Finalizing...")
-    # delete high adductives
-    # Adducts (NH3+Na+Mn+FA) < S + HexA + charge – 2
-    result <- matches %>%
-              filter(adducts < S + HexA + charge - 2) %>%
-              filter(neutral_mass != 0) 
     
     result$gaussian <- 0.5
     
@@ -242,7 +259,6 @@ hepQuan <- function(scan, iso, ppm, db,
   }
   else {
     print("No Results")
-    result <- matches
     outp_db <- result
   }
   

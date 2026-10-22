@@ -56,8 +56,8 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa, reducing
         data <- filter(db, ppm >= abs((neutral_mass - exp_mass) / exp_mass * 10^6)) |>
                     mutate(
                       exp_mass = exp_mass + shifts$shift[x], 
-                      "Na" = shifts$Na[x],
                       "NH3" = shifts$NH3[x],
+                      "Na" = shifts$Na[x],
                       "Mn" = shifts$Mn[x],
                       "FA" = shifts$FA[x],
                       ppm = abs(round(((neutral_mass - exp_mass + shifts$shift[x]) / (exp_mass + shifts$shift[x]) * 10^6), 2))
