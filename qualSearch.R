@@ -1,15 +1,9 @@
-qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa, reducing_end, non_end) {
+qualSearch <- function(mz, charge, ppm, iso_peak, path, na = 0, nh = 0, mn = 0, fa = 0, reducing_end, non_end) {
 
   db_path = path
   
   db = read.table(file = db_path , sep = '\t', header = TRUE)
-  
-  chem_mod <- data.frame(
-    name = c("pNP", "DUA", "1,6-Anhydro"),
-    mass = c(121.0164, -18.0106, -18.0106),
-    formula = c("C6H3NO2", "H2O", "H20")
-  )
-  
+
   reducing_end <- if (is.null(reducing_end)) 0 else reducing_end
   
   non_end <- if (is.null(non_end)) 0 else non_end
@@ -23,14 +17,14 @@ qualSearch <- function(mz, charge, ppm, iso_peak, path, na, nh, mn, fa, reducing
   if(!is.na(mz) && !is.na(charge) && !is.na(ppm)) {
     result <- data.frame(stringsAsFactors = FALSE) 
     for(x in c(1:nrow(shifts))) {
-      incProgress(1/nrow(shifts), detail = "Searching all possible shifts...")
+      incProgress(1/nrow(shifts), detail = "Searching...")
       ### experimental mass formula --- (mz * charge + charge * 1.0078) - shift ###
       exp_mass = round((mz * charge) + (charge * 1.0078), 5) - shifts$shift[x]
       
       if(iso_peak == 'no') {
         for(i in c(1:5)) {
           peak_mass = round(exp_mass - (i-1) * 1.00335, 5)
-          
+
           data <- filter(db, ppm >= abs((neutral_mass - peak_mass) / peak_mass * 10^6)) |>
                   mutate(
                     "Exp Mass" = peak_mass + shifts$shift[x],

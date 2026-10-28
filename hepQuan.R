@@ -10,7 +10,7 @@ library(data.table)
 hepQuan <- function(scan, iso, ppm, db, 
                     minscan, start, end, 
                     dp_lwr, dp_upr, 
-                    na, nh, mn, fa, 
+                    na = 0, nh = 0, mn = 0, fa = 0, 
                     window = 100, nups = 3, ndowns = 3, threshold = 2, ticfilter = .95,
                     reducing_end, non_end) {
   
@@ -150,26 +150,24 @@ hepQuan <- function(scan, iso, ppm, db,
     inner_join(data_idx, by = "match_row") %>%
     mutate(ppm = abs(neutral_mass - exp_mass) / exp_mass * 1e6)
   
-  adduct_cols <- c("NH3", "Na", "Mn", "FA")
-  
-  # TRUE if the distinct values are exactly 0, 1, 2, ... max (with max > 0)
-  is_seq <- function(x) {
-    u <- sort(unique(x))
-    max(u) > 0 && u[1] == 0 && all(diff(u) == 1)
+  if(na + nh + mn + fa > 0) {
+    adduct_cols <- c("NH3", "Na", "Mn", "FA")
+    # TRUE if the distinct values are exactly 0, 1, 2, ... max (with max > 0)
+    is_seq <- function(x) {
+      u <- sort(unique(x))
+      max(u) > 0 && u[1] == 0 && all(diff(u) == 1)
+    }
+    matches <- matches %>%
+      group_by(name) %>%
+      filter(any(sapply(across(all_of(adduct_cols)), is_seq))) %>%
+      ungroup()
   }
-  
-  matches <- matches %>%
-    group_by(name) %>%
-    filter(any(sapply(across(all_of(adduct_cols)), is_seq))) %>%
-    ungroup()
   
   # delete high adductives
   # Adducts (NH3+Na+Mn+FA) < S + HexA + charge – 2
   result <- matches %>%
     filter(adducts < S + HexA + charge - 2) %>%
     filter(neutral_mass != 0) 
-  
-  print(result)
   
   #delete not matched peaks
   if(nrow(result) > 0) {

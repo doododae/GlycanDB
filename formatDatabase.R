@@ -38,13 +38,13 @@ sub_formulas <- function(a, b) {
 }
 
 format_db <- function(db, reducing_end, non_end) {
-  og_data <- db
-  
+  og_db <- db
+  end_db <- db
   #add any reducing/non-reducing ends to the backbone database
   chem_mod <- data.frame(
-    name = c("pNP", "DUA", "1,6-Anhydro"),
+    name = c("pNP", "DUA", "1-6-Anhydro"),
     mass = c(121.0164, -18.0106, -18.0106),
-    formula = c("C6H3NO2", "H2O", "H20")
+    formula = c("C6H3NO2", "H2O", "H2O")
   )
   
   if('pnp' %in% reducing_end) {
@@ -54,18 +54,16 @@ format_db <- function(db, reducing_end, non_end) {
     db$formula <- mapply(add_formulas, db$formula, mod_formula)
     db$neutral_mass <- db$neutral_mass + tag_mass
   } else if('1-6-anhydro' %in% reducing_end) {
-    mod_formula <- chem_mod %>% filter(name == "1-6-anhydro") %>% pull(formula)
-    tag_mass <- chem_mod %>% filter(name == "1-6-anhydro") %>% pull(mass)
+    mod_formula <- chem_mod %>% filter(name == "1-6-Anhydro") %>% pull(formula)
+    tag_mass <- chem_mod %>% filter(name == "1-6-Anhydro") %>% pull(mass)
     db$name <- paste0(db$name, "_1,6-Anhydro")
     db$formula <- mapply(sub_formulas, db$formula, mod_formula)
     db$neutral_mass <- db$neutral_mass + tag_mass
   }
   
   if('normal' %in% reducing_end) {
-    temp <- db
-    db <- union(db, og_data)
-    #save reducing end only data in case needed
-    og_data <- temp
+    db <- union(db, og_db)
+    end_db <- db
   }
   
   if('dua' %in% non_end) {
@@ -74,11 +72,12 @@ format_db <- function(db, reducing_end, non_end) {
     db$name <- sub("HS_", "ΔUA_", db$name, fixed = TRUE)
     db$formula <- mapply(sub_formulas, db$formula, mod_formula)
     db$neutral_mass <- db$neutral_mass + tag_mass
+    
   }
   
   if('normal' %in% non_end) {
-    db <- union(db, og_data)
+    db <- union(db, end_db)
   }
-  
+
   return(db)
 }
