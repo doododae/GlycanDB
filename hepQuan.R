@@ -150,24 +150,40 @@ hepQuan <- function(scan, iso, ppm, db,
     inner_join(data_idx, by = "match_row") %>%
     mutate(ppm = abs(neutral_mass - exp_mass) / exp_mass * 1e6)
   
-  if(na + nh + mn + fa > 0) {
     adduct_cols <- c("NH3", "Na", "Mn", "FA")
-    # TRUE if the distinct values are exactly 0, 1, 2, ... max (with max > 0)
-    is_seq <- function(x) {
-      u <- sort(unique(x))
-      max(u) > 0 && u[1] == 0 && all(diff(u) == 1)
+    
+    # TRUE where another row in the group sits one step away in count AND
+    # within rt_tol minutes in retention time
+    has_neighbor <- function(count, time, rt_tol) {
+      n <- length(count)
+      if (n < 2) return(rep(FALSE, n))
+      step_1 <- abs(outer(count, count, "-")) == 1
+      near   <- abs(outer(time,  time,  "-")) <= rt_tol
+      rowSums(step_1 & near) > 0
     }
-    matches <- matches %>%
-      group_by(name) %>%
-      filter(any(sapply(across(all_of(adduct_cols)), is_seq))) %>%
-      ungroup()
-  }
+    
+    filter_adduct_support <- function(df, rt_tol = 0.2, hold_others = TRUE) {
+      for (col in adduct_cols) {
+        others   <- setdiff(adduct_cols, col)
+        grp_vars <- c("name", "charge", if (hold_others) others)
+        
+        df <- df %>%
+          group_by(across(all_of(grp_vars))) %>%
+          mutate(!!paste0("ok_", col) := has_neighbor(.data[[col]], time, rt_tol)) %>%
+          ungroup()
+      }
+      
+      ok <- sapply(adduct_cols, function(col) df[[col]] == 0 | df[[paste0("ok_", col)]])
+      df[rowSums(!ok) == 0, setdiff(names(df), paste0("ok_", adduct_cols))]
+    }
+    
+    result <- filter_adduct_support(matches, rt_tol = 0.1)
   
   # delete high adductives
   # Adducts (NH3+Na+Mn+FA) < S + HexA + charge – 2
-  result <- matches %>%
-    filter(adducts < S + HexA + charge - 2) %>%
-    filter(neutral_mass != 0) 
+  #result <- matches %>%
+  #  filter(adducts < S + HexA + charge - 2) %>%
+  #  filter(neutral_mass != 0) 
   
   #delete not matched peaks
   if(nrow(result) > 0) {
