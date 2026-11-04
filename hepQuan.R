@@ -177,7 +177,12 @@ hepQuan <- function(scan, iso, ppm, db,
       df[rowSums(!ok) == 0, setdiff(names(df), paste0("ok_", adduct_cols))]
     }
     
-    result <- filter_adduct_support(matches, rt_tol = 0.1)
+    if(na + nh + fa + mn > 0) {
+      result <- filter_adduct_support(matches, rt_tol = 0.2)
+    }
+    else {
+      result <- matches
+    }
   
   # delete high adductives
   # Adducts (NH3+Na+Mn+FA) < S + HexA + charge – 2
